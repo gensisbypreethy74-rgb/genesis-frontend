@@ -1,284 +1,348 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { User, ShoppingBag, X, Menu, LogOut, Search } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "../../context/CartContext";
+import Logo from "../ui/Logo";
 
-const NAV_LINKS = [
-  { href: "/", label: "Home", exact: true },
-  { href: "/products", label: "Products", exact: false },
+/* ── Navigation model ─────────────────────────────────────────────────────────
+   Single-page site: the three nav items scroll to sections on the Home page.
+   On any other route they navigate home first, then the hash scrolls into view. */
+const SECTIONS = [
+  { id: "the-edit", label: "The Edit" },
+  { id: "the-moment", label: "The Moment" },
+  { id: "story", label: "Story" },
 ];
 
-// WhatsApp contact number (redirect target)
-const WHATSAPP_NUMBER = "916235251520";
-
-// WhatsApp brand glyph (lucide has no dedicated WhatsApp icon).
-// Two-tone: green bubble + white phone handset.
-function WhatsAppIcon({ size = 20 }: { size?: number }) {
+/**
+ * `light` means the bar is sitting over the hero image; once scrolled it's on
+ * ivory. The old text wordmark flipped ivory→ink for that. The logo can't
+ * recolour, so we cross-fade the gold mark (over imagery) into the ink mark
+ * (on ivory) — gold on ivory reads at only ~2:1 and looks washed out.
+ *
+ * Both are stacked and faded rather than swapped so the transition matches the
+ * 300ms colour transition everything else in the bar uses.
+ */
+function Wordmark({ light }: { light: boolean }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      aria-hidden="true"
+    <Link
+      href="/"
+      aria-label="Genesis by Preethy — home"
+      className="group relative block"
     >
-      {/* Green speech bubble */}
-      <path
-        fill="#25D366"
-        d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2z"
+      <Logo
+        tone="gold"
+        priority
+        className={`h-[30px] sm:h-[34px] lg:h-[38px] transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          light ? "opacity-100" : "opacity-0"
+        }`}
       />
-      {/* White phone handset */}
-      <path
-        fill="#FFFFFF"
-        d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.26-.46-2.39-1.48-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.6.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.21-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48 0 1.46 1.07 2.88 1.21 3.07.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.69.63.71.22 1.36.19 1.87.12.57-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.12-.27-.2-.57-.35z"
+      <Logo
+        tone="ink"
+        priority
+        className={`absolute inset-0 h-[30px] sm:h-[34px] lg:h-[38px] transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          light ? "opacity-0" : "opacity-100"
+        }`}
       />
-    </svg>
+    </Link>
   );
 }
 
+/* Minimal line icons (used only for the mobile menu / search glyphs) */
+const Ic = {
+  search: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" />
+    </svg>
+  ),
+  menu: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" {...p}>
+      <path d="M3 6h18M3 12h18M3 18h18" />
+    </svg>
+  ),
+  close: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" {...p}>
+      <path d="M18 6 6 18M6 6l12 12" />
+    </svg>
+  ),
+};
+
 export default function Navbar() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [query, setQuery] = useState("");
 
   const { cartCount, clearLocalCart } = useCart();
   const pathname = usePathname();
   const router = useRouter();
 
+  // The Home page renders a full-bleed hero behind a transparent header.
+  const hasHero = pathname === "/";
+  const overHero = hasHero && !scrolled && !searchOpen;
+  const solid = !overHero;
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   useEffect(() => {
     setIsLoggedIn(!!localStorage.getItem("heedy_user"));
-    setIsMobileMenuOpen(false);
-    setIsMobileSearchOpen(false);
+    setMobileOpen(false);
+    setSearchOpen(false);
   }, [pathname]);
 
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setIsMobileMenuOpen(false);
-        setIsMobileSearchOpen(false);
+        setMobileOpen(false);
+        setSearchOpen(false);
       }
     };
-    window.addEventListener("keydown", handleEscape);
-    return () => window.removeEventListener("keydown", handleEscape);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Lock scroll when the mobile drawer is open
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [mobileOpen]);
+
   const handleLogout = () => {
-    // Clear local session + cart state only; the DB cart is preserved for next login.
     localStorage.removeItem("heedy_user");
     setIsLoggedIn(false);
     clearLocalCart();
+    setMobileOpen(false);
     router.push("/sign-in");
   };
 
-  const isActive = (href: string, exact: boolean) =>
-    exact ? pathname === href : pathname.startsWith(href);
-
-  const handleSearch = (e: React.FormEvent) => {
+  const submitSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    const q = searchQuery.trim();
+    const q = query.trim();
     router.push(q ? `/products?search=${encodeURIComponent(q)}` : "/products");
-    setIsMobileMenuOpen(false);
-    setIsMobileSearchOpen(false);
+    setSearchOpen(false);
+    setMobileOpen(false);
   };
 
+  // Scroll to a Home-page section. If already on Home, smooth-scroll in place;
+  // otherwise navigate to the hash so the browser scrolls after Home loads.
+  const goToSection = (e: React.MouseEvent, id: string) => {
+    setMobileOpen(false);
+    if (pathname === "/") {
+      const el = document.getElementById(id);
+      if (el) {
+        e.preventDefault();
+        el.scrollIntoView({ behavior: "smooth" });
+        history.replaceState(null, "", `/#${id}`);
+      }
+    }
+    // When not on Home, let the <Link href={`/#id`}> navigate normally.
+  };
+
+  const goToHome = (e: React.MouseEvent) => {
+    setMobileOpen(false);
+    // Already home: don't reload the route, just return to the top.
+    if (pathname === "/") {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      history.replaceState(null, "", "/");
+    }
+    // Elsewhere, the <Link href="/"> navigates home normally.
+  };
+
+  const linkColor = solid ? "text-ink" : "text-ivory";
+
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 h-16 lg:h-[72px] px-2.5 sm:px-4 lg:px-8 flex items-center gap-1.5 sm:gap-3 lg:gap-6 border-b border-black/10 bg-[#aea3cf]/95 backdrop-blur-md">
-      {/* Mobile menu toggle */}
-      <button
-        onClick={() => setIsMobileMenuOpen((v) => !v)}
-        className="lg:hidden p-1 sm:p-2 -ml-1 sm:-ml-2 text-slate-900 hover:text-[#4a3391] transition-colors"
-        aria-label="Toggle menu"
+    <>
+      <motion.header
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className={`fixed top-0 inset-x-0 z-50 transition-colors duration-300 ${
+          solid
+            ? "bg-ivory/95 backdrop-blur-md border-b border-line shadow-[0_1px_20px_rgba(28,26,21,0.04)]"
+            : "bg-transparent border-b border-transparent"
+        }`}
       >
-        {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-      </button>
-
-      {/* Logo */}
-      <Link href="/" className="flex-shrink-0" aria-label="NEOKART home">
-        <div className="relative w-40 sm:w-44 md:w-52 lg:w-56 h-11 sm:h-10 lg:h-12">
-          <Image
-            src="/logo.png"
-            alt="Neokart Logo"
-            fill
-            sizes="(max-width: 640px) 224px, (max-width: 768px) 256px, (max-width: 1024px) 320px, 384px"
-            className="object-contain object-left"
-            priority
-          />
-        </div>
-      </Link>
-
-      {/* Desktop nav links */}
-      <nav className="hidden lg:flex items-center gap-8 ml-2">
-        {NAV_LINKS.map((link) => {
-          const active = isActive(link.href, link.exact);
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`font-sans font-semibold text-[15px] pb-1 border-b-2 transition-colors ${active
-                ? "text-slate-900 border-[#4a3391]"
-                : "text-slate-700 border-transparent hover:text-slate-900"
-                }`}
+        <div className="h-[68px] lg:h-[84px] max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-10 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+          {/* LEFT — desktop nav / mobile menu button */}
+          <div className="flex items-center">
+            <button
+              onClick={() => setMobileOpen((v) => !v)}
+              className={`lg:hidden p-1 -ml-1 ${linkColor}`}
+              aria-label="Open menu"
             >
-              {link.label}
-            </Link>
-          );
-        })}
-      </nav>
+              <Ic.menu width={22} height={22} />
+            </button>
 
-      {/* Desktop search bar */}
-      <form
-        onSubmit={handleSearch}
-        role="search"
-        className="hidden md:flex flex-1 max-w-md mx-4 items-center"
-      >
-        <div className="relative w-full">
-          <Search
-            size={18}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
-          />
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search products..."
-            aria-label="Search products"
-            className="w-full h-10 pl-10 pr-4 rounded-full bg-white/80 border border-black/10 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#4a3391] focus:bg-white transition"
-          />
-        </div>
-      </form>
-
-      {/* Spacer to push utilities right (mobile — search opens from the icon) */}
-      <div className="flex-1 md:hidden" />
-
-      {/* Right utilities */}
-      <div className="flex items-center gap-1 sm:gap-2 lg:gap-3 shrink-0">
-        {/* Mobile search toggle (desktop uses the inline search bar) */}
-        <button
-          onClick={() => {
-            setIsMobileSearchOpen((v) => !v);
-            setIsMobileMenuOpen(false);
-          }}
-          className="md:hidden p-1 sm:p-2 text-slate-900 hover:text-[#4a3391] transition-colors"
-          aria-label="Search"
-          aria-expanded={isMobileSearchOpen}
-        >
-          {isMobileSearchOpen ? <X size={20} /> : <Search size={20} />}
-        </button>
-
-        {/* WhatsApp */}
-        <a
-          href={`https://wa.me/${WHATSAPP_NUMBER}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="p-1 sm:p-2 hover:opacity-80 transition-opacity"
-          aria-label="Contact us on WhatsApp"
-        >
-          <WhatsAppIcon size={26} />
-        </a>
-
-        {/* Account */}
-        <Link
-          href={isLoggedIn ? "/profile" : "/sign-in"}
-          className="p-1 sm:p-2 text-slate-900 hover:text-[#4a3391] transition-colors"
-          aria-label="Account"
-        >
-          <User size={20} />
-        </Link>
-
-        {/* Cart */}
-        <Link
-          href="/cart"
-          className="relative p-1 sm:p-2 text-slate-900 hover:text-[#4a3391] transition-colors"
-          aria-label="Cart"
-        >
-          <ShoppingBag size={20} />
-          {cartCount > 0 && (
-            <span className="absolute top-0 right-0 min-w-[18px] h-[18px] px-1 bg-[#4a3391] text-white text-[10px] font-bold rounded-full flex items-center justify-center border border-[#aea3cf]">
-              {cartCount}
-            </span>
-          )}
-        </Link>
-
-        {/* Logout (when logged in) */}
-        {isLoggedIn && (
-          <button
-            onClick={handleLogout}
-            className="hidden sm:flex p-2 text-slate-900 hover:text-red-600 transition-colors"
-            aria-label="Log out"
-          >
-            <LogOut size={19} />
-          </button>
-        )}
-      </div>
-
-      {/* Mobile search bar (slides down from header) */}
-      <AnimatePresence>
-        {isMobileSearchOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="absolute top-full left-0 right-0 bg-[#aea3cf] border-b border-black/10 shadow-lg z-30 md:hidden overflow-hidden"
-          >
-            <form onSubmit={handleSearch} role="search" className="px-6 py-3">
-              <div className="relative w-full">
-                <Search
-                  size={18}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
-                />
-                <input
-                  type="search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search products..."
-                  aria-label="Search products"
-                  autoFocus
-                  className="w-full h-10 pl-10 pr-4 rounded-full bg-white/80 border border-black/10 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#4a3391] focus:bg-white transition"
-                />
-              </div>
-            </form>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Mobile menu overlay */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="absolute top-full left-0 right-0 bg-[#aea3cf] border-b border-black/10 shadow-lg z-30 lg:hidden overflow-hidden"
-          >
-            <nav className="flex flex-col px-6 py-3">
-              {NAV_LINKS.map((link) => (
+            <nav className="hidden lg:flex items-center gap-9">
+              {SECTIONS.map((item) => (
                 <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={`font-sans font-semibold text-base py-3 border-b border-black/10 last:border-0 transition-colors ${isActive(link.href, link.exact) ? "text-[#4a3391]" : "text-slate-900 hover:text-[#4a3391]"
-                    }`}
+                  key={item.id}
+                  href={`/#${item.id}`}
+                  onClick={(e) => goToSection(e, item.id)}
+                  className={`eyebrow ${linkColor} hover:opacity-60 transition-opacity`}
                 >
-                  {link.label}
+                  {item.label}
                 </Link>
               ))}
-              {isLoggedIn && (
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-2 font-sans font-semibold text-base py-3 text-red-700 text-left"
-                >
-                  <LogOut size={18} /> Log out
-                </button>
-              )}
             </nav>
-          </motion.div>
+          </div>
+
+          {/* CENTER — wordmark */}
+          <Wordmark light={!solid} />
+
+          {/* RIGHT — utilities (text labels) */}
+          <div className={`flex items-center justify-end gap-5 sm:gap-7 ${linkColor}`}>
+            <button
+              onClick={() => setSearchOpen((v) => !v)}
+              aria-label="Search"
+              className="hidden sm:block eyebrow hover:opacity-60 transition-opacity"
+            >
+              Search
+            </button>
+
+            {/* Mobile search icon */}
+            <button
+              onClick={() => setSearchOpen((v) => !v)}
+              aria-label="Search"
+              className="sm:hidden hover:opacity-60 transition-opacity"
+            >
+              <Ic.search width={19} height={19} />
+            </button>
+
+            <Link
+              href={isLoggedIn ? "/profile" : "/sign-in"}
+              className="hidden sm:block eyebrow hover:opacity-60 transition-opacity"
+            >
+              Account
+            </Link>
+
+            <Link
+              href="/cart"
+              aria-label={cartCount > 0 ? `Bag, ${cartCount} items` : "Bag"}
+              className="flex items-center gap-2 eyebrow hover:opacity-60 transition-opacity"
+            >
+              Bag
+              {/* The count is a notification, not a label: an empty bag has
+                  nothing to announce, so the badge only exists once something
+                  is in it. */}
+              {cartCount > 0 && (
+                <span
+                  className={`min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-sans font-semibold flex items-center justify-center ${
+                    solid ? "bg-bronze text-ivory" : "bg-ivory text-ink"
+                  }`}
+                >
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+          </div>
+        </div>
+
+        {/* Search drawer */}
+        <AnimatePresence>
+          {searchOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="overflow-hidden bg-ivory border-t border-line"
+            >
+              <form onSubmit={submitSearch} role="search" className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-10 py-6">
+                <div className="flex items-center gap-4 border-b border-ink/30 pb-3">
+                  <Ic.search width={20} height={20} className="text-muted shrink-0" />
+                  <input
+                    autoFocus
+                    type="search"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search pieces, collections…"
+                    aria-label="Search"
+                    className="w-full bg-transparent font-display text-2xl sm:text-3xl text-ink placeholder:text-faint focus:outline-none"
+                  />
+                  <button type="button" onClick={() => setSearchOpen(false)} aria-label="Close search" className="text-muted hover:text-ink">
+                    <Ic.close width={22} height={22} />
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.header>
+
+      {/* Mobile drawer */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm lg:hidden"
+              onClick={() => setMobileOpen(false)}
+            />
+            <motion.aside
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+              className="fixed top-0 left-0 bottom-0 z-50 w-[82%] max-w-[360px] bg-ivory flex flex-col lg:hidden"
+            >
+              <div className="flex items-center justify-between h-[68px] px-6 border-b border-line">
+                {/* Drawer sits on ivory, so the ink mark. */}
+                <Logo tone="ink" className="h-[26px]" />
+                <button onClick={() => setMobileOpen(false)} aria-label="Close menu" className="text-ink">
+                  <Ic.close width={22} height={22} />
+                </button>
+              </div>
+
+              <nav className="flex-1 overflow-y-auto px-6 py-6">
+                {/* Home: the section links only scroll within the homepage, so a
+                    visitor deeper in the site had no menu route back to it. */}
+                <Link
+                  href="/"
+                  onClick={(e) => goToHome(e)}
+                  className="block py-4 font-display text-3xl text-ink border-b border-line"
+                >
+                  Home
+                </Link>
+
+                {SECTIONS.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={`/#${item.id}`}
+                    onClick={(e) => goToSection(e, item.id)}
+                    className="block py-4 font-display text-3xl text-ink border-b border-line"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+
+                <div className="mt-8 space-y-4">
+                  <Link href={isLoggedIn ? "/profile" : "/sign-in"} onClick={() => setMobileOpen(false)}
+                    className="block eyebrow text-muted hover:text-ink">
+                    Account
+                  </Link>
+                  {isLoggedIn && (
+                    <button onClick={handleLogout} className="block eyebrow text-muted hover:text-ink">
+                      Sign Out
+                    </button>
+                  )}
+                </div>
+              </nav>
+            </motion.aside>
+          </>
         )}
       </AnimatePresence>
-    </header>
+    </>
   );
 }

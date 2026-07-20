@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import Breadcrumbs from "../../components/common/Breadcrumbs";
 import axios from "axios";
-import { Check, CreditCard, ShieldCheck, MapPin, X, Banknote, ArrowLeft } from "lucide-react";
 import { useCart } from "../../context/CartContext";
 import { useToast } from "../../context/ToastContext";
+import { Button } from "../../components/ui/Button";
+import Reveal from "../../components/ui/Reveal";
+import { cldOptimize } from "../../lib/image";
 
 export default function CheckoutPage() {
   const { cartItems, clearCart } = useCart();
@@ -355,259 +357,279 @@ export default function CheckoutPage() {
     }
   };
 
+  // ── Full-screen verifying overlay ──
   if (isVerifyingPayment) {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center">
-        <div className="w-16 h-16 border-4 border-slate-600 border-t-white rounded-full animate-spin mb-6"></div>
-        <h2 className="font-sans font-bold text-2xl text-white mb-2">Verifying Payment</h2>
-        <p className="text-slate-400">Please wait while we confirm your order. Do not close this window.</p>
+      <div className="min-h-screen bg-ivory flex flex-col items-center justify-center px-6 text-center">
+        <div className="w-12 h-12 border border-line border-t-bronze rounded-full animate-spin mb-8"></div>
+        <p className="eyebrow text-bronze-deep mb-3">One moment</p>
+        <h2 className="font-display font-light text-3xl text-ink mb-3">Verifying Payment</h2>
+        <p className="font-sans text-muted max-w-sm leading-relaxed">
+          Please wait while we confirm your order. Do not close this window.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black pt-24 pb-16">
-      <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20 pt-8">
+    <div className="min-h-screen bg-ivory pt-[84px]">
+      <div className="max-w-[1500px] mx-auto px-6 sm:px-10 lg:px-16 pt-16 lg:pt-24 pb-24">
 
-        {/* Main Title */}
-        <h1 className="font-sans font-bold text-3xl md:text-4xl text-white mb-12">
-          Secure Checkout
-        </h1>
+        {/* Header */}
+        <Breadcrumbs className="mb-6" />
+        <Reveal>
+          <h1 className="font-display font-light text-[clamp(2.5rem,5vw,4rem)] leading-[1.08] text-ink">
+            Checkout
+          </h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-start">
+          {/* Editorial stepper */}
+          <div className="flex items-center gap-5 mt-8">
+            <span
+              className={`eyebrow transition-colors ${step === "shipping" ? "text-ink" : "text-faint"}`}
+            >
+              01 · Shipping
+            </span>
+            <span className="h-px w-8 bg-line" />
+            <span
+              className={`eyebrow transition-colors ${step === "payment" ? "text-ink" : "text-faint"}`}
+            >
+              02 · Payment
+            </span>
+          </div>
+        </Reveal>
+
+        <div className="mt-14 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
 
           {/* ── Left Column (Steps) ── */}
           <div className="lg:col-span-8 flex flex-col gap-12">
 
             {step === "shipping" && (
-            <>
-            {/* Step 1: SHIPPING DESTINATION */}
-            <div className="flex flex-col gap-6">
-              <div className="flex items-start gap-4">
-                <div className="w-8 h-8 rounded-full bg-white text-[#0a0a0a] flex items-center justify-center text-sm font-bold flex-shrink-0 mt-1">
-                  1
+              <Reveal className="flex flex-col gap-8">
+                {/* Step 1: SHIPPING */}
+                <div>
+                  <p className="eyebrow text-bronze-deep mb-3">Step One</p>
+                  <h2 className="font-display font-light text-[clamp(1.75rem,3.5vw,2.75rem)] leading-[1.08] text-ink">
+                    Shipping Address
+                  </h2>
                 </div>
-                <h2 className="font-sans font-black text-4xl lg:text-5xl text-white uppercase tracking-tight text-left w-full leading-[1.1]">
-                  Shipping<br />Destination
-                </h2>
-              </div>
 
-              <div className="flex flex-col sm:flex-row flex-wrap gap-6 ml-0 sm:ml-12 mt-4">
-                {addresses.map((addr) => {
-                  const isSelected = selectedAddressId === addr.id;
-                  return (
-                    <button
-                      key={addr.id}
-                      onClick={() => setSelectedAddressId(addr.id)}
-                      className={`relative border rounded-2xl sm:rounded-[2rem] p-6 sm:p-8 w-full max-w-sm bg-[#aea3cf]/95 text-left transition-colors ${isSelected ? "border-slate-300" : "border-slate-200 hover:border-slate-300"
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  {addresses.map((addr) => {
+                    const isSelected = selectedAddressId === addr.id;
+                    return (
+                      <button
+                        key={addr.id}
+                        onClick={() => setSelectedAddressId(addr.id)}
+                        className={`relative text-left border p-6 transition-colors ${
+                          isSelected
+                            ? "border-ink bg-cream"
+                            : "border-line bg-cream/40 hover:border-ink/40"
                         }`}
-                    >
-                      {isSelected && (
-                        <div className="absolute -top-3 right-8 w-6 h-6 bg-[#0a0a0a] text-white rounded-full flex items-center justify-center border-4 border-white box-content">
-                          <Check size={12} strokeWidth={4} />
-                        </div>
-                      )}
-                      <div className="flex items-start gap-3">
-                        <MapPin size={20} className="text-slate-500 flex-shrink-0 mt-1" />
-                        <div>
-                          <p className="font-sans font-bold text-slate-900 mb-2">{addr.name}</p>
-                          <p className="font-sans text-slate-500 leading-relaxed text-sm">
-                            {addr.line1}<br />
-                            {addr.line2}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
+                      >
+                        {/* Selection indicator */}
+                        <span
+                          className={`absolute top-5 right-5 w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${
+                            isSelected ? "border-ink" : "border-line"
+                          }`}
+                        >
+                          {isSelected && <span className="w-2 h-2 rounded-full bg-ink" />}
+                        </span>
 
-                {/* New Address Button */}
-                <button
-                  onClick={() => setIsAddressModalOpen(true)}
-                  className="border border-slate-200 rounded-2xl sm:rounded-[2rem] p-6 sm:p-8 w-full sm:w-40 flex flex-col items-center justify-center gap-2 bg-[#aea3cf]/95 hover:bg-[#aea3cf] transition-colors text-slate-900 font-bold text-sm"
-                >
-                  <span className="text-xl font-normal">+</span>
-                  <span className="text-center">New<br />Address</span>
-                </button>
-              </div>
-            </div>
-            </>
+                        <p className="font-display text-lg text-ink capitalize mb-2 pr-6">
+                          {addr.name}
+                        </p>
+                        <p className="font-sans text-sm text-muted leading-relaxed capitalize">
+                          {addr.line1}<br />
+                          {addr.line2}
+                        </p>
+                      </button>
+                    );
+                  })}
+
+                  {/* New Address tile */}
+                  <button
+                    onClick={() => setIsAddressModalOpen(true)}
+                    className="border border-dashed border-line p-6 min-h-[120px] flex flex-col items-center justify-center gap-2 text-muted hover:border-ink/40 hover:text-ink transition-colors"
+                  >
+                    <span className="text-2xl font-light leading-none">+</span>
+                    <span className="eyebrow">New Address</span>
+                  </button>
+                </div>
+              </Reveal>
             )}
 
             {step === "payment" && (
-            <div ref={paymentSectionRef} className="flex flex-col gap-8 scroll-mt-24">
-              {/* Back to shipping */}
-              <button
-                onClick={() => setStep("shipping")}
-                className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors self-start text-sm font-semibold"
-              >
-                <ArrowLeft size={16} />
-                Back to shipping
-              </button>
-
-              <div className="flex items-start gap-4">
-                <div className="w-8 h-8 rounded-full bg-white text-[#0a0a0a] flex items-center justify-center text-sm font-bold flex-shrink-0 mt-1">
-                  2
-                </div>
-                <h2 className="font-sans font-black text-4xl lg:text-5xl text-white uppercase tracking-tight text-left w-full leading-[1.1]">
-                  Payment<br />Method
-                </h2>
-              </div>
-
-              <div className="flex flex-col gap-5 ml-0 sm:ml-12 mt-2">
-                {/* Online Payment (Razorpay) */}
+              <div ref={paymentSectionRef} className="flex flex-col gap-8 scroll-mt-28">
+                {/* Back to shipping */}
                 <button
-                  onClick={() => setPaymentMethod("online")}
-                  aria-pressed={paymentMethod === "online"}
-                  className={`relative flex items-start gap-4 border-2 rounded-2xl sm:rounded-[1.75rem] p-5 sm:p-6 w-full max-w-md text-left transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
-                    paymentMethod === "online"
-                      ? "bg-white border-[#4a3391] ring-4 ring-[#4a3391]/20 shadow-xl shadow-[#4a3391]/20"
-                      : "bg-white/60 border-transparent hover:bg-white hover:border-[#aea3cf]"
-                  }`}
+                  onClick={() => setStep("shipping")}
+                  className="self-start font-sans text-[11px] uppercase tracking-[0.14em] text-muted hover:text-ink link-underline"
                 >
-                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${paymentMethod === "online" ? "bg-[#4a3391] text-white" : "bg-[#aea3cf]/30 text-[#4a3391]"}`}>
-                    <CreditCard size={22} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-sans font-bold text-[#4a3391]">Online Payment (Prepaid)</p>
-                      <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${paymentMethod === "online" ? "border-[#4a3391] bg-[#4a3391]" : "border-[#aea3cf]"}`}>
-                        {paymentMethod === "online" && <Check size={12} strokeWidth={4} className="text-white" />}
-                      </span>
-                    </div>
-                    <p className="font-sans text-[#7c68b8] text-sm leading-relaxed mt-1">
-                      Pay securely via card, UPI, or netbanking with Razorpay.
-                    </p>
-                  </div>
+                  ← Back to Shipping
                 </button>
 
-                {/* Cash on Delivery */}
-                <button
-                  onClick={() => setPaymentMethod("cod")}
-                  aria-pressed={paymentMethod === "cod"}
-                  className={`relative flex items-start gap-4 border-2 rounded-2xl sm:rounded-[1.75rem] p-5 sm:p-6 w-full max-w-md text-left transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
-                    paymentMethod === "cod"
-                      ? "bg-white border-[#4a3391] ring-4 ring-[#4a3391]/20 shadow-xl shadow-[#4a3391]/20"
-                      : "bg-white/60 border-transparent hover:bg-white hover:border-[#aea3cf]"
-                  }`}
-                >
-                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${paymentMethod === "cod" ? "bg-[#4a3391] text-white" : "bg-[#aea3cf]/30 text-[#4a3391]"}`}>
-                    <Banknote size={22} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-sans font-bold text-[#4a3391]">Cash on Delivery</p>
-                      <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${paymentMethod === "cod" ? "border-[#4a3391] bg-[#4a3391]" : "border-[#aea3cf]"}`}>
-                        {paymentMethod === "cod" && <Check size={12} strokeWidth={4} className="text-white" />}
+                <div>
+                  <p className="eyebrow text-bronze-deep mb-3">Step Two</p>
+                  <h2 className="font-display font-light text-[clamp(1.75rem,3.5vw,2.75rem)] leading-[1.08] text-ink">
+                    Payment Method
+                  </h2>
+                </div>
+
+                <div className="flex flex-col gap-4 max-w-xl">
+                  {/* Online Payment (Razorpay) */}
+                  <button
+                    onClick={() => setPaymentMethod("online")}
+                    aria-pressed={paymentMethod === "online"}
+                    className={`text-left border p-6 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ink ${
+                      paymentMethod === "online"
+                        ? "border-ink bg-cream"
+                        : "border-line bg-cream/40 hover:border-ink/40"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="font-sans font-medium text-ink">Online Payment (Prepaid)</p>
+                        <p className="font-sans text-sm text-muted leading-relaxed mt-1">
+                          Pay securely via card, UPI, or netbanking with Razorpay.
+                        </p>
+                      </div>
+                      <span
+                        className={`mt-1 w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${
+                          paymentMethod === "online" ? "border-ink" : "border-line"
+                        }`}
+                      >
+                        {paymentMethod === "online" && <span className="w-2 h-2 rounded-full bg-ink" />}
                       </span>
                     </div>
-                    <p className="font-sans text-[#7c68b8] text-sm leading-relaxed mt-1">
-                      Pay a 10% advance online now; pay the balance in cash on delivery.
-                    </p>
+                  </button>
+
+                  {/* Cash on Delivery */}
+                  <button
+                    onClick={() => setPaymentMethod("cod")}
+                    aria-pressed={paymentMethod === "cod"}
+                    className={`text-left border p-6 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ink ${
+                      paymentMethod === "cod"
+                        ? "border-ink bg-cream"
+                        : "border-line bg-cream/40 hover:border-ink/40"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="font-sans font-medium text-ink">Cash on Delivery</p>
+                        <p className="font-sans text-sm text-muted leading-relaxed mt-1">
+                          Pay a 10% advance online now; pay the balance in cash on delivery.
+                        </p>
+                      </div>
+                      <span
+                        className={`mt-1 w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${
+                          paymentMethod === "cod" ? "border-ink" : "border-line"
+                        }`}
+                      >
+                        {paymentMethod === "cod" && <span className="w-2 h-2 rounded-full bg-ink" />}
+                      </span>
+                    </div>
 
                     {paymentMethod === "cod" && (
-                      <div className="mt-4 border-t border-[#4a3391]/25 pt-4 flex flex-col gap-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-[#7c68b8]">Advance now (10%)</span>
-                          <span className="font-bold text-[#4a3391]">₹{advanceAmount.toFixed(2)}</span>
+                      <div className="mt-5 pt-5 border-t border-line flex flex-col gap-2">
+                        <div className="flex justify-between font-sans text-sm">
+                          <span className="text-muted">Advance now (10%)</span>
+                          <span className="font-medium text-ink">₹{advanceAmount.toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-[#7c68b8]">Balance on delivery</span>
-                          <span className="font-bold text-[#4a3391]">₹{balanceAmount.toFixed(2)}</span>
+                        <div className="flex justify-between font-sans text-sm">
+                          <span className="text-muted">Balance on delivery</span>
+                          <span className="font-medium text-ink">₹{balanceAmount.toFixed(2)}</span>
                         </div>
                       </div>
                     )}
-                  </div>
-                </button>
+                  </button>
+                </div>
               </div>
-            </div>
             )}
 
           </div>
 
           {/* ── Right Column (Order Bag) ── */}
-          <div className="lg:col-span-4 bg-[#aea3cf]/95 p-8 rounded-3xl shadow-sm border border-slate-100 sticky top-32">
-            <h2 className="font-sans font-bold text-xl text-slate-900 mb-8">Order Bag</h2>
+          <div className="lg:col-span-4 lg:sticky lg:top-28">
+            <Reveal delay={0.1}>
+              <div className="bg-cream border border-line p-8">
+                <p className="eyebrow text-bronze-deep mb-6">Order Bag</p>
 
-            {/* Cart Items List */}
-            <div className="flex flex-col gap-6 mb-8 max-h-[400px] overflow-y-auto pr-2">
-              {cartItems.length === 0 ? (
-                <p className="text-slate-500 font-sans text-sm">Your order bag is empty.</p>
-              ) : (
-                cartItems.map((item) => (
-                  <div key={item.id} className="flex gap-4">
-                    <div className="relative w-16 h-20 bg-slate-50 rounded-lg overflow-hidden flex-shrink-0 border border-slate-100">
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        fill
-                        sizes="64px"
-                        className="object-cover"
-                      />
-                      <div className="absolute top-0 right-0 bg-[#0a0a0a] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-bl-lg">
-                        {item.quantity}
-                      </div>
-                    </div>
-                    <div className="flex flex-col flex-1">
-                      <h3 className="font-sans font-bold text-sm text-slate-900 leading-snug line-clamp-2 pr-4">
-                        {item.name}
-                      </h3>
-                      {item.size && (
-                        <p className="font-sans text-xs text-slate-500 mt-1">
-                          {item.size}
+                {/* Cart Items List */}
+                <div className="flex flex-col gap-5 mb-8 max-h-[360px] overflow-y-auto pr-1 hide-scrollbar">
+                  {cartItems.length === 0 ? (
+                    <p className="font-sans text-sm text-muted">Your order bag is empty.</p>
+                  ) : (
+                    cartItems.map((item) => (
+                      <div key={item.id} className="flex gap-4">
+                        <div className="relative w-14 aspect-[4/5] bg-sand overflow-hidden flex-shrink-0">
+                          <img
+                            src={cldOptimize(item.image, 160)}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                          />
+                          <span className="absolute top-0 right-0 bg-ink text-ivory text-[10px] w-4 h-4 flex items-center justify-center">
+                            {item.quantity}
+                          </span>
+                        </div>
+                        <div className="flex flex-col flex-1 min-w-0">
+                          <p className="font-display text-base text-ink leading-snug line-clamp-2">
+                            {item.name}
+                          </p>
+                          {item.size && (
+                            <p className="font-sans text-[11px] text-muted mt-1 uppercase tracking-[0.14em]">
+                              {item.size}
+                            </p>
+                          )}
+                        </div>
+                        <p className="font-sans text-sm text-ink flex-shrink-0">
+                          {item.currency}{item.price * item.quantity}
                         </p>
-                      )}
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="font-sans font-bold text-sm text-slate-900">
-                        {item.currency}{item.price * item.quantity}
-                      </p>
-                    </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="space-y-4 mb-6">
+                  <div className="flex justify-between items-center font-sans text-sm">
+                    <span className="text-muted">Subtotal</span>
+                    <span className="text-ink">₹{subtotal.toFixed(2)}</span>
                   </div>
-                ))
-              )}
-            </div>
+                  <div className="flex justify-between items-center font-sans text-sm">
+                    <span className="text-muted">Shipping</span>
+                    <span className="text-forest uppercase text-[11px] tracking-[0.14em]">
+                      Complimentary
+                    </span>
+                  </div>
+                </div>
 
-            <div className="space-y-4 mb-6">
-              <div className="flex justify-between items-center text-slate-500 font-sans text-sm">
-                <span>Subtotal</span>
-                <span className="text-slate-900">₹{subtotal.toFixed(2)}</span>
+                <div className="h-px bg-line mb-6" />
+
+                <div className="flex justify-between items-baseline mb-8">
+                  <span className="font-sans text-sm uppercase tracking-[0.14em] text-ink">Total</span>
+                  <span className="font-display font-light text-3xl text-ink">₹{total.toFixed(2)}</span>
+                </div>
+
+                <Button
+                  onClick={step === "shipping" ? goToPayment : handlePlaceOrder}
+                  disabled={isPlacingOrder}
+                  variant="solid"
+                  size="md"
+                  className="w-full"
+                >
+                  {step === "shipping"
+                    ? "Continue to Payment"
+                    : isPlacingOrder
+                    ? "Processing..."
+                    : paymentMethod === "cod"
+                    ? `Pay ₹${advanceAmount.toFixed(2)} Advance`
+                    : "Pay Now"}
+                </Button>
+
+                <p className="text-center font-sans text-[11px] text-faint mt-5 tracking-[0.1em] uppercase">
+                  256-bit SSL Secured
+                </p>
               </div>
-              <div className="flex justify-between items-center text-slate-500 font-sans text-sm">
-                <span>Shipping</span>
-                <span>
-                  <span className="text-green-600 font-bold tracking-wide">Free</span>
-                </span>
-              </div>
-            </div>
-
-            <div className="h-px border-t border-dashed border-slate-200 mb-6" />
-
-            <div className="flex justify-between items-end mb-8">
-              <span className="font-sans font-bold text-lg text-slate-900">Total</span>
-              <span className="font-sans font-black text-2xl text-slate-900">₹{total.toFixed(2)}</span>
-            </div>
-
-            <button
-              onClick={step === "shipping" ? goToPayment : handlePlaceOrder}
-              disabled={isPlacingOrder}
-              className="w-full bg-[#111] text-white font-bold text-base py-4 sm:py-5 rounded-xl hover:bg-black transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 mb-4 disabled:opacity-50"
-            >
-              {step === "shipping"
-                ? "Secure Checkout"
-                : isPlacingOrder
-                ? "Processing..."
-                : paymentMethod === "cod"
-                ? `Pay ₹${advanceAmount.toFixed(2)} Advance`
-                : "Pay Now"}
-            </button>
-
-            <div className="flex items-center justify-center gap-2 text-slate-400">
-              <ShieldCheck size={14} />
-              <p className="font-sans text-[10px] uppercase tracking-widest">
-                256-bit SSL Secured Connection
-              </p>
-            </div>
+            </Reveal>
           </div>
 
         </div>
@@ -617,93 +639,99 @@ export default function CheckoutPage() {
       {isAddressModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-ink/30 backdrop-blur-sm"
             onClick={() => setIsAddressModalOpen(false)}
           />
-          <div className="relative bg-[#aea3cf]/95 rounded-[2rem] w-full max-w-lg shadow-xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="relative bg-ivory border border-line w-full max-w-lg shadow-xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 sm:p-8 border-b border-slate-100">
-              <h2 className="font-sans font-black text-2xl text-slate-900 tracking-tight">
-                New Shipping Address
-              </h2>
+            <div className="flex items-center justify-between p-6 sm:p-8 border-b border-line">
+              <div>
+                <p className="eyebrow text-bronze-deep mb-2">Shipping</p>
+                <h2 className="font-display font-light text-2xl text-ink">
+                  New Address
+                </h2>
+              </div>
               <button
                 onClick={() => setIsAddressModalOpen(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors focus:outline-none"
+                aria-label="Close"
+                className="w-9 h-9 flex items-center justify-center text-xl leading-none text-muted hover:text-ink border border-line hover:border-ink/40 transition-colors"
               >
-                <X size={16} />
+                ×
               </button>
             </div>
 
             {/* Form */}
             <div className="p-6 sm:p-8 flex flex-col gap-5">
               <div>
-                <label className="block font-sans font-bold text-sm text-slate-700 mb-2">Street Address</label>
+                <label className="block font-sans text-[11px] uppercase tracking-[0.14em] text-muted mb-2">Street Address</label>
                 <input
                   type="text"
                   value={newAddressForm.street}
                   onChange={(e) => { setNewAddressForm({ ...newAddressForm, street: e.target.value }); setAddressErrors(prev => ({ ...prev, street: '' })); }}
-                  placeholder="e.g. 123 Luxury Lane"
-                  className={`w-full border rounded-xl px-4 py-3 text-base text-slate-900 focus:outline-none focus:border-[#0a0a0a] placeholder:text-slate-700 ${addressErrors.street ? 'border-red-400 ring-1 ring-red-400' : 'border-slate-200'}`}
+                  placeholder="e.g. 123 Marine Drive"
+                  className={`w-full bg-cream border rounded-none px-4 py-3 font-sans text-base text-ink focus:outline-none focus:border-ink placeholder:text-faint ${addressErrors.street ? 'border-red-400' : 'border-line'}`}
                 />
-                {addressErrors.street && <p className="text-red-500 text-xs mt-1.5 font-medium">{addressErrors.street}</p>}
+                {addressErrors.street && <p className="text-red-500 text-xs mt-1.5">{addressErrors.street}</p>}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block font-sans font-bold text-sm text-slate-700 mb-2">City <span className="text-red-500">*</span></label>
+                  <label className="block font-sans text-[11px] uppercase tracking-[0.14em] text-muted mb-2">City <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={newAddressForm.city}
                     onChange={(e) => { setNewAddressForm({ ...newAddressForm, city: e.target.value }); setAddressErrors(prev => ({ ...prev, city: '' })); }}
-                    placeholder="Mumbai"
-                    className={`w-full border rounded-xl px-4 py-3 text-base text-slate-900 focus:outline-none focus:border-[#0a0a0a] placeholder:text-slate-700 ${addressErrors.city ? 'border-red-400 ring-1 ring-red-400' : 'border-slate-200'}`}
+                    placeholder="Kochi"
+                    className={`w-full bg-cream border rounded-none px-4 py-3 font-sans text-base text-ink focus:outline-none focus:border-ink placeholder:text-faint ${addressErrors.city ? 'border-red-400' : 'border-line'}`}
                   />
-                  {addressErrors.city && <p className="text-red-500 text-xs mt-1.5 font-medium">{addressErrors.city}</p>}
+                  {addressErrors.city && <p className="text-red-500 text-xs mt-1.5">{addressErrors.city}</p>}
                 </div>
                 <div>
-                  <label className="block font-sans font-bold text-sm text-slate-700 mb-2">State <span className="text-red-500">*</span></label>
+                  <label className="block font-sans text-[11px] uppercase tracking-[0.14em] text-muted mb-2">State <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={newAddressForm.state}
                     onChange={(e) => { setNewAddressForm({ ...newAddressForm, state: e.target.value }); setAddressErrors(prev => ({ ...prev, state: '' })); }}
-                    placeholder="Maharashtra"
-                    className={`w-full border rounded-xl px-4 py-3 text-base text-slate-900 focus:outline-none focus:border-[#0a0a0a] placeholder:text-slate-700 ${addressErrors.state ? 'border-red-400 ring-1 ring-red-400' : 'border-slate-200'}`}
+                    placeholder="Kerala"
+                    className={`w-full bg-cream border rounded-none px-4 py-3 font-sans text-base text-ink focus:outline-none focus:border-ink placeholder:text-faint ${addressErrors.state ? 'border-red-400' : 'border-line'}`}
                   />
-                  {addressErrors.state && <p className="text-red-500 text-xs mt-1.5 font-medium">{addressErrors.state}</p>}
+                  {addressErrors.state && <p className="text-red-500 text-xs mt-1.5">{addressErrors.state}</p>}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block font-sans font-bold text-sm text-slate-700 mb-2">PIN Code <span className="text-red-500">*</span></label>
+                  <label className="block font-sans text-[11px] uppercase tracking-[0.14em] text-muted mb-2">PIN Code <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={newAddressForm.zip}
                     onChange={(e) => { setNewAddressForm({ ...newAddressForm, zip: e.target.value }); setAddressErrors(prev => ({ ...prev, zip: '' })); }}
-                    placeholder="123456"
-                    className={`w-full border rounded-xl px-4 py-3 text-base text-slate-900 focus:outline-none focus:border-[#0a0a0a] placeholder:text-slate-700 ${addressErrors.zip ? 'border-red-400 ring-1 ring-red-400' : 'border-slate-200'}`}
+                    placeholder="682001"
+                    className={`w-full bg-cream border rounded-none px-4 py-3 font-sans text-base text-ink focus:outline-none focus:border-ink placeholder:text-faint ${addressErrors.zip ? 'border-red-400' : 'border-line'}`}
                   />
-                  {addressErrors.zip && <p className="text-red-500 text-xs mt-1.5 font-medium">{addressErrors.zip}</p>}
+                  {addressErrors.zip && <p className="text-red-500 text-xs mt-1.5">{addressErrors.zip}</p>}
                 </div>
                 <div>
-                  <label className="block font-sans font-bold text-sm text-slate-700 mb-2">Country</label>
+                  <label className="block font-sans text-[11px] uppercase tracking-[0.14em] text-muted mb-2">Country</label>
                   <input
                     type="text"
                     value={newAddressForm.country}
                     onChange={(e) => setNewAddressForm({ ...newAddressForm, country: e.target.value })}
                     placeholder="India"
-                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-base text-slate-900 focus:outline-none focus:border-[#0a0a0a] placeholder:text-slate-700"
+                    className="w-full bg-cream border border-line rounded-none px-4 py-3 font-sans text-base text-ink focus:outline-none focus:border-ink placeholder:text-faint"
                   />
                 </div>
               </div>
 
-              <button
+              <Button
                 onClick={handleSaveAddress}
                 disabled={isSavingAddress}
-                className="w-full bg-[#111] text-white font-bold text-base py-4 rounded-xl mt-4 hover:bg-black transition-colors focus:outline-none disabled:opacity-50"
+                variant="solid"
+                size="md"
+                className="w-full mt-4"
               >
                 {isSavingAddress ? "Saving..." : "Save & Deliver Here"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

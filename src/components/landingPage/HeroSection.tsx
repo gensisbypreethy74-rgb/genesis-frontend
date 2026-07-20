@@ -97,9 +97,20 @@ export default function HeroSection() {
   }, []);
 
   // Filter slides dynamically based on screen size
-  const finalSlides = allSlides.filter(slide => {
+  let finalSlides = allSlides.filter(slide => {
     return isMobile ? !!slide.mobileImage : true;
   });
+
+  if (!isLoading && finalSlides.length === 0) {
+    finalSlides = [{
+      id: "default-slide",
+      image: "/images/image.png",
+      mobileImage: "/images/image.png",
+      alt: "The Onam Collection",
+      headline: "The Onam Collection",
+      subheadline: "Tropical-intelligent clothing, drawn from a life lived in heat, humidity and rain."
+    }];
+  }
 
   useEffect(() => {
     if (currentSlide >= finalSlides.length) {

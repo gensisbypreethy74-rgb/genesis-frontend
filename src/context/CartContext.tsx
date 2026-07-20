@@ -68,10 +68,19 @@ const mapBackendItems = (items: any[]): CartItem[] =>
         item.product.variants?.find((v: any) => v.volume === item.size) ||
         item.product.variants?.[0];
 
+      // Prefer a product-level image, then the chosen variant's image, then any
+      // variant image — so products photographed only per-variant still show a
+      // cart/checkout thumbnail.
+      const image =
+        item.product.images?.[0] ||
+        variant?.images?.[0] ||
+        item.product.variants?.map((v: any) => v.images?.[0]).find(Boolean) ||
+        "";
+
       return {
         id: item.product._id,
         name: item.product.name,
-        image: item.product.images?.[0] || "",
+        image,
         price: variant?.price || 0,
         currency: "₹",
         size: variant?.volume || item.size,

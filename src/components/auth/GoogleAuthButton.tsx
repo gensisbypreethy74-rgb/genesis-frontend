@@ -111,7 +111,7 @@ function GoogleButtonUI({
   return (
     <div className="w-full">
       {error && (
-        <div className="mb-4 bg-red-50 text-red-600 p-3 rounded-xl text-sm font-medium border border-red-100 text-center">
+        <div className="mb-4 border border-[#d8c3ba] bg-[#f4e9e3] text-[#8a3a2e] px-4 py-3 text-[13px] font-sans text-center">
           {error}
         </div>
       )}
@@ -120,16 +120,16 @@ function GoogleButtonUI({
         type="button"
         onClick={onClick}
         disabled={loading || disabled}
-        className="group relative w-full flex items-center justify-center gap-3 bg-black border-2 border-slate-200 rounded-xl py-4 px-6
-          hover:border-slate-300 hover:bg-slate-800 hover:shadow-lg hover:shadow-slate-100/50
-          active:scale-[0.98] 
-          transition-all duration-300 ease-out
-          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-          disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:scale-100"
+        className="group relative w-full flex items-center justify-center gap-3 bg-cream border border-line rounded-none py-4 px-6
+          hover:bg-beige
+          active:scale-[0.99]
+          transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/40 focus-visible:ring-offset-2 focus-visible:ring-offset-ivory
+          disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {/* Google Logo */}
         {loading ? (
-          <div className="w-5 h-5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-line border-t-ink rounded-full animate-spin" />
         ) : (
           <svg
             width="20"
@@ -156,22 +156,15 @@ function GoogleButtonUI({
           </svg>
         )}
 
-        <span className="font-sans font-semibold text-sm text-slate-200 tracking-wide group-hover:text-white transition-colors duration-300">
+        <span className="font-sans uppercase tracking-[0.16em] text-[11px] text-ink">
           {loading
-            ? "Connecting..."
+            ? "Connecting…"
             : disabled
             ? "Google Sign-In (Not configured)"
             : mode === "signin"
             ? "Continue with Google"
             : "Sign up with Google"}
         </span>
-
-        {/* Subtle shine effect on hover */}
-        {!disabled && (
-          <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
-            <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-          </div>
-        )}
       </button>
     </div>
   );

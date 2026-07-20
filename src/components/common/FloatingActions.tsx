@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowUp } from "lucide-react";
 
 export default function FloatingActions() {
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -23,12 +22,14 @@ export default function FloatingActions() {
       {/* Scroll to Top */}
       <button
         onClick={scrollToTop}
-        className={`w-10 h-10 md:w-12 md:h-12 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 hover:scale-110 transition-all duration-300 flex items-center justify-center ${
+        className={`w-11 h-11 md:w-12 md:h-12 bg-ink text-ivory shadow-[0_8px_30px_rgba(28,26,21,0.18)] hover:bg-forest transition-all duration-300 flex items-center justify-center ${
           showScrollTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
         } motion-reduce:transition-none motion-reduce:transform-none`}
         aria-label="Scroll to top"
       >
-        <ArrowUp size={20} />
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M12 19V5M5 12l7-7 7 7" />
+        </svg>
       </button>
     </div>
   );

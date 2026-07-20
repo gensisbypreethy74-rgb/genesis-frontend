@@ -1,41 +1,25 @@
-"use client";
-
-import Link from "next/link";
-import { motion } from "framer-motion";
+import { ButtonLink } from "../components/ui/Button";
+import Reveal from "../components/ui/Reveal";
 
 export default function NotFound() {
   return (
-    <main className="flex-grow flex flex-col items-center justify-center bg-black px-6 py-32 md:py-48">
-      <div className="max-w-2xl w-full text-center space-y-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
-        >
-          <p className="font-sans font-semibold text-xs tracking-[0.3em] uppercase text-blue-800 mb-4">
-            404 ERROR
-          </p>
-          <h1 className="font-serif font-normal text-5xl md:text-7xl text-slate-900 leading-tight mb-6">
-            Page Not Found
+    <main className="bg-ivory min-h-screen pt-[84px] flex-grow flex items-center">
+      <div className="max-w-[1500px] w-full mx-auto px-6 sm:px-10 lg:px-16 py-24 sm:py-32">
+        <Reveal className="max-w-2xl mx-auto text-center">
+          <p className="eyebrow text-bronze-deep mb-6">Error 404</p>
+          <h1 className="font-display font-light text-ink leading-[1.08] text-[clamp(2.5rem,7vw,5rem)]">
+            Page not found
           </h1>
-          <p className="font-sans font-normal text-lg md:text-xl text-slate-500 leading-relaxed max-w-lg mx-auto">
-            The page you are looking for might have been removed, had its name changed, or is temporarily unavailable.
+          <p className="mt-7 font-sans text-[15px] leading-[1.9] text-muted max-w-md mx-auto">
+            The page you were looking for may have moved, been renamed, or is no
+            longer here. Let us take you back to something more familiar.
           </p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-          className="pt-8"
-        >
-          <Link
-            href="/"
-            className="inline-block px-8 py-3.5 rounded-full bg-slate-900 text-white font-sans font-semibold text-xs tracking-[0.2em] uppercase transition-all duration-300 hover:bg-slate-800 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 shadow-lg shadow-black/10"
-          >
-            Return to Home
-          </Link>
-        </motion.div>
+          <div className="mt-11 flex justify-center">
+            <ButtonLink href="/" variant="outline" size="md">
+              Return home
+            </ButtonLink>
+          </div>
+        </Reveal>
       </div>
     </main>
   );
