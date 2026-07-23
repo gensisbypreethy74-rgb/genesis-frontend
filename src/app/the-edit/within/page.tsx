@@ -1,13 +1,10 @@
-import CollectionListing from "../../../components/collections/CollectionListing";
+import ProductBrowser from "../../../components/shop/ProductBrowser";
 
 export default function WithinPage() {
   return (
-    <CollectionListing
-      eyebrow="The Edit · Within"
-      title="Within"
-      blurb="Pieces for the hours spent at home and close to it — soft structure, breathable cloth, the private self dressed with the same care as the public one. At-home identity, held quietly together."
-      collectionSlug="within"
-      modeSlug="at-home-identity"
+    <ProductBrowser
+      scope={{ sectionSlugs: ["within"], modeSlugs: ["at-home-identity"] }}
+      heading={{ eyebrow: "The Edit · Within", title: "Within" }}
     />
   );
 }

@@ -4,8 +4,12 @@ import FoundersNote from "../components/home/FoundersNote";
 import CategoryGrid from "../components/home/CategoryGrid";
 import ProductArchive from "../components/home/ProductArchive";
 import TheMoment from "../components/home/TheMoment";
+import MomentExplainer from "../components/home/MomentExplainer";
 import StudioNotes from "../components/home/StudioNotes";
 import StudioNewsletter from "../components/home/StudioNewsletter";
+import { fetchMoment } from "../lib/moment";
+
+export const dynamic = "force-dynamic";
 
 /**
  * Single-page site. Home section order:
@@ -15,13 +19,15 @@ import StudioNewsletter from "../components/home/StudioNewsletter";
  *   4. The Edit            (CategoryGrid,   id="the-edit")  — live categories
  *   5. The Archive         (ProductArchive, id="the-archive") — collection carousel
  *   6. The Moment          (TheMoment,      id="the-moment") — dark launch block
- *   7. Story               (StudioNotes,    id="story")     — Studio Notes · The Designer's Eye
- *   8. Newsletter
- *   9. Footer (global, app/layout.tsx)
+ *   7. Moment Explainer    (MomentExplainer) — how the drop model works
+ *   8. Story               (StudioNotes,    id="story")     — Studio Notes · The Designer's Eye
+ *   9. Newsletter
+ *   10. Footer (global, app/layout.tsx)
  *
  * Nav (The Edit · The Moment · Story) scrolls to sections #the-edit / #the-moment / #story.
  */
-export default function Home() {
+export default async function Home() {
+  const moment = await fetchMoment();
   return (
     <main className="bg-ivory">
       <HeroSection />
@@ -29,7 +35,8 @@ export default function Home() {
       <FoundersNote />
       <CategoryGrid />
       <ProductArchive />
-      <TheMoment />
+      <TheMoment moment={moment} />
+      <MomentExplainer moment={moment} />
       <StudioNotes />
       <StudioNewsletter />
     </main>

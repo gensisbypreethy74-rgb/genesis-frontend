@@ -16,6 +16,14 @@ const SECTIONS = [
   { id: "story", label: "Story" },
 ];
 
+/* THE EDIT is a dropdown to its four sub-pages. */
+const EDIT_SUBPAGES = [
+  { href: "/the-edit/within", label: "Within" },
+  { href: "/the-edit/beyond", label: "Beyond" },
+  { href: "/the-edit/genesis-man", label: "Genesis Men" },
+  { href: "/the-edit/archive", label: "Archive" },
+];
+
 /**
  * `light` means the bar is sitting over the hero image; once scrolled it's on
  * ivory. The old text wordmark flipped ivory→ink for that. The logo can't
@@ -75,6 +83,8 @@ export default function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [query, setQuery] = useState("");
+  const [editOpen, setEditOpen] = useState(false); // desktop dropdown
+  const [mobileEditOpen, setMobileEditOpen] = useState(false);
 
   const { cartCount, clearLocalCart } = useCart();
   const pathname = usePathname();
@@ -131,10 +141,16 @@ export default function Navbar() {
     setMobileOpen(false);
   };
 
+  // Some nav items are real routes (e.g. Story → /story), not Home anchors.
+  const sectionHref = (id: string) => (id === "story" ? "/story" : `/#${id}`);
+
   // Scroll to a Home-page section. If already on Home, smooth-scroll in place;
   // otherwise navigate to the hash so the browser scrolls after Home loads.
   const goToSection = (e: React.MouseEvent, id: string) => {
     setMobileOpen(false);
+    // Route items navigate normally — don't hijack the click to scroll a
+    // same-named Home section (Home has its own #story block).
+    if (id === "story") return;
     if (pathname === "/") {
       const el = document.getElementById(id);
       if (el) {
@@ -183,16 +199,60 @@ export default function Navbar() {
             </button>
 
             <nav className="hidden lg:flex items-center gap-9">
-              {SECTIONS.map((item) => (
-                <Link
-                  key={item.id}
-                  href={`/#${item.id}`}
-                  onClick={(e) => goToSection(e, item.id)}
-                  className={`eyebrow ${linkColor} hover:opacity-60 transition-opacity`}
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {SECTIONS.map((item) =>
+                item.id === "the-edit" ? (
+                  <div
+                    key={item.id}
+                    className="relative"
+                    onMouseEnter={() => setEditOpen(true)}
+                    onMouseLeave={() => setEditOpen(false)}
+                  >
+                    <Link
+                      href={sectionHref(item.id)}
+                      onClick={(e) => goToSection(e, item.id)}
+                      className={`eyebrow ${linkColor} hover:opacity-60 transition-opacity flex items-center gap-1.5`}
+                      aria-haspopup="true"
+                      aria-expanded={editOpen}
+                    >
+                      {item.label}
+                      <span className={`text-[8px] transition-transform duration-300 ${editOpen ? "rotate-180" : ""}`}>▾</span>
+                    </Link>
+                    <AnimatePresence>
+                      {editOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 6 }}
+                          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                          className="absolute left-0 top-full pt-4"
+                        >
+                          <div className="min-w-[190px] bg-cream border border-line shadow-[0_18px_50px_rgba(28,26,21,0.10)] py-2">
+                            {EDIT_SUBPAGES.map((sub) => (
+                              <Link
+                                key={sub.href}
+                                href={sub.href}
+                                onClick={() => setEditOpen(false)}
+                                className="block px-5 py-2.5 eyebrow text-ink hover:text-bronze hover:bg-tan/50 transition-colors"
+                              >
+                                {sub.label}
+                              </Link>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ) : (
+                  <Link
+                    key={item.id}
+                    href={sectionHref(item.id)}
+                    onClick={(e) => goToSection(e, item.id)}
+                    className={`eyebrow ${linkColor} hover:opacity-60 transition-opacity`}
+                  >
+                    {item.label}
+                  </Link>
+                )
+              )}
             </nav>
           </div>
 
@@ -316,16 +376,52 @@ export default function Navbar() {
                   Home
                 </Link>
 
-                {SECTIONS.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/#${item.id}`}
-                    onClick={(e) => goToSection(e, item.id)}
-                    className="block py-4 font-display text-3xl text-ink border-b border-line"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
+                {SECTIONS.map((item) =>
+                  item.id === "the-edit" ? (
+                    <div key={item.id} className="border-b border-line">
+                      <button
+                        onClick={() => setMobileEditOpen((v) => !v)}
+                        className="w-full flex items-center justify-between py-4 font-display text-3xl text-ink"
+                        aria-expanded={mobileEditOpen}
+                      >
+                        {item.label}
+                        <span className={`text-base transition-transform ${mobileEditOpen ? "rotate-180" : ""}`}>▾</span>
+                      </button>
+                      <AnimatePresence>
+                        {mobileEditOpen && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="pb-4 pl-4 space-y-1">
+                              {EDIT_SUBPAGES.map((sub) => (
+                                <Link
+                                  key={sub.href}
+                                  href={sub.href}
+                                  onClick={() => setMobileOpen(false)}
+                                  className="block py-2.5 eyebrow text-muted hover:text-ink"
+                                >
+                                  {sub.label}
+                                </Link>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  ) : (
+                    <Link
+                      key={item.id}
+                      href={sectionHref(item.id)}
+                      onClick={(e) => goToSection(e, item.id)}
+                      className="block py-4 font-display text-3xl text-ink border-b border-line"
+                    >
+                      {item.label}
+                    </Link>
+                  )
+                )}
 
                 <div className="mt-8 space-y-4">
                   <Link href={isLoggedIn ? "/profile" : "/sign-in"} onClick={() => setMobileOpen(false)}

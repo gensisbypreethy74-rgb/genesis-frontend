@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
+import type { Moment } from "../../lib/moment";
 
 /* Bespoke dark palette for this section (per spec) */
 const C = {
@@ -19,8 +20,16 @@ const ease = [0.16, 1, 0.3, 1] as const;
  * Full-bleed warm near-black background, cream editorial typography, dual CTA.
  * Sits directly after the product carousel; nav "The Moment" anchors here.
  */
-export default function TheMoment() {
+export default function TheMoment({ moment }: { moment?: Moment | null }) {
   const reduce = useReducedMotion();
+
+  const eyebrow = moment?.eyebrow ?? "The Moment · A Considered Cadence";
+  const title = moment?.title ?? "The Moment is here.";
+  const paragraphs = (moment?.body ??
+    "A small, named run — pieces drawn for Onam, live now. It closes on its own time, not when stock runs low.\n\nNothing here is discounted, and nothing is rushed. When this window closes, the pieces move — unchanged — into the Archive, and rest there, fully available to buy."
+  ).split(/\n{2,}/);
+  const shopLabel = moment?.shopLabel ?? "Shop the Onam Collection";
+  const shopHref = moment?.shopHref ?? "/products?collection=onam";
 
   // Staggered fade + upward translate; opacity-only when reduced motion is on.
   const container = {
@@ -64,7 +73,7 @@ export default function TheMoment() {
           className="font-sans uppercase text-[10px] sm:text-[11px] tracking-[0.28em] mb-4"
           style={{ color: C.secondary }}
         >
-          The Moment · A Considered Cadence
+          {eyebrow}
         </motion.p>
 
         {/* Headline */}
@@ -74,27 +83,21 @@ export default function TheMoment() {
           className="font-display font-light leading-[1.1] text-[clamp(1.75rem,4.2vw,3.25rem)] mb-5"
           style={{ color: C.primary }}
         >
-          The Moment <em className="italic font-normal">is here.</em>
+          {title}
         </motion.h2>
 
         {/* Body */}
         <div className="mx-auto" style={{ maxWidth: 640 }}>
-          <motion.p
-            variants={item}
-            className="font-display text-[16px] sm:text-[17px] leading-[1.65] mb-4"
-            style={{ color: C.body }}
-          >
-            A small, named run — pieces drawn for Onam, live now. It closes on its own time,
-            not when stock runs low.
-          </motion.p>
-          <motion.p
-            variants={item}
-            className="font-display text-[16px] sm:text-[17px] leading-[1.65]"
-            style={{ color: C.body }}
-          >
-            Nothing here is discounted, and nothing is rushed. When this window closes, the
-            pieces move — unchanged — into the Archive, and rest there, fully available to buy.
-          </motion.p>
+          {paragraphs.map((p, i) => (
+            <motion.p
+              key={i}
+              variants={item}
+              className="font-display text-[16px] sm:text-[17px] leading-[1.65] mb-4 last:mb-0"
+              style={{ color: C.body }}
+            >
+              {p}
+            </motion.p>
+          ))}
         </div>
 
         {/* CTAs */}
@@ -103,7 +106,7 @@ export default function TheMoment() {
           className="mt-7 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
         >
           <Link
-            href="/products?collection=onam"
+            href={shopHref}
             className="w-full sm:w-auto text-center font-sans uppercase tracking-[0.16em] text-[12px] px-8 py-4 rounded-[2px] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
             style={
               {
@@ -117,7 +120,7 @@ export default function TheMoment() {
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = C.btnHover)}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = C.primary)}
           >
-            Shop the Onam Collection
+            {shopLabel}
           </Link>
 
           <Link

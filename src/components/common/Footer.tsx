@@ -8,13 +8,12 @@ const WHATSAPP_NUMBER = "916235251520";
 
 const COLUMNS: { title: string; links: { label: string; href: string; external?: boolean }[] }[] = [
   {
-    title: "Shop",
+    title: "The Wardrobe Edit",
     links: [
-      { label: "Shop All", href: "/products" },
-      { label: "Now", href: "/products?collection=onam" },
-      { label: "The Season", href: "/products" },
-      { label: "Ambition", href: "/products?mode=ambition" },
-      { label: "At-Home Identity", href: "/products?mode=at-home-identity" },
+      { label: "Within", href: "/the-edit/within" },
+      { label: "Beyond", href: "/the-edit/beyond" },
+      { label: "Genesis Men", href: "/the-edit/genesis-man" },
+      { label: "Archive", href: "/the-edit/archive" },
     ],
   },
   {

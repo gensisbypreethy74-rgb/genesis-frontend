@@ -18,6 +18,8 @@ export interface Product {
   collectionName?: string; // seasonal drop, e.g. "Onam" (backend field is `collectionName`)
   season?: string;
   lifeMode?: string;
+  editSection?: string; // "Within" | "Beyond" | "Genesis Men" | "Archive"
+  limited?: boolean;    // renders the "LIMITED PIECE" tag
   description?: string;
   keyFeatures?: string;
   variants?: Variant[];
@@ -88,6 +90,39 @@ export function productImages(p: Product): { primary?: string; secondary?: strin
 /** Garment descriptor shown under the name (e.g. "Lace-Trim Kurta Set"). */
 export function garmentLabel(p: Product): string {
   return p.garmentType || p.category || "";
+}
+
+// Short display labels for the life-mode tag shown on a product card.
+const MODE_TAG_LABEL: Record<string, string> = {
+  "at-home identity": "AT-HOME",
+  "at-home-identity": "AT-HOME",
+  "casual/out": "CASUAL/OUT",
+  "casual-out": "CASUAL/OUT",
+  ambition: "AMBITION",
+  occasion: "OCCASION",
+};
+
+export interface ProductTag {
+  label: string;
+  /** Limited tags render in the warm-brown "LIMITED PIECE" style. */
+  limited?: boolean;
+}
+
+/**
+ * Card tags, in order: the life-mode label (AT-HOME / AMBITION / …) then, when
+ * the piece is flagged, a "LIMITED PIECE" tag. Falls back to `offerText` as a
+ * tag when there's no life mode, so older pieces still show their badge.
+ */
+export function productTags(p: Product): ProductTag[] {
+  const tags: ProductTag[] = [];
+  if (p.lifeMode) {
+    const key = p.lifeMode.trim().toLowerCase();
+    tags.push({ label: MODE_TAG_LABEL[key] || p.lifeMode.toUpperCase() });
+  } else if (p.offerText) {
+    tags.push({ label: p.offerText });
+  }
+  if (p.limited) tags.push({ label: "LIMITED PIECE", limited: true });
+  return tags;
 }
 
 /** Indian rupee formatting: ₹18,500 */

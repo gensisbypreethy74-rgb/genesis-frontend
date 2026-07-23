@@ -10,6 +10,7 @@ import {
   productImagePool,
   garmentLabel,
   formatINR,
+  productTags,
 } from "../../lib/product";
 
 export default function ProductCard({
@@ -25,6 +26,7 @@ export default function ProductCard({
   const price = fromPrice(product);
   const oldPrice = fromOldPrice(product);
   const garment = garmentLabel(product);
+  const tags = productTags(product);
 
   // Walk the pool rather than trusting its first entry.
   //
@@ -78,19 +80,30 @@ export default function ProductCard({
           </div>
         )}
 
-        {product.offerText && (
-          <span className="absolute top-3 left-3 eyebrow bg-ivory/90 text-ink px-2.5 py-1">
-            {product.offerText}
-          </span>
+        {tags.length > 0 && (
+          <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
+            {tags.map((t, i) => (
+              <span
+                key={i}
+                className={`font-sans uppercase tracking-[0.08em] text-[10px] leading-none px-2.5 py-1.5 ${
+                  t.limited ? "bg-[#8B7355] text-ivory" : "bg-tan text-ink"
+                }`}
+              >
+                {t.label}
+              </span>
+            ))}
+          </div>
         )}
       </div>
 
-      <div className="pt-4 text-center">
-        <h3 className="font-display text-xl text-ink leading-tight">{product.name}</h3>
+      <div className="pt-4">
+        <h3 className="font-display text-[19px] text-ink leading-tight group-hover:text-bronze transition-colors">
+          {product.name}
+        </h3>
         {garment && (
-          <p className="font-sans text-[12px] text-muted mt-1">{garment}</p>
+          <p className="font-sans text-[13px] text-muted mt-1">{garment}</p>
         )}
-        <p className="font-display text-[15px] text-ink mt-2 flex items-center justify-center gap-2">
+        <p className="font-sans text-[14px] text-ink mt-2 flex items-center gap-2">
           {price > 0 ? formatINR(price) : "Enquire"}
           {oldPrice && (
             <span className="text-faint line-through text-[13px]">{formatINR(oldPrice)}</span>

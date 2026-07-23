@@ -1,13 +1,12 @@
-import CollectionListing from "../../../components/collections/CollectionListing";
+import ProductBrowser from "../../../components/shop/ProductBrowser";
 
 export default function GenesisManPage() {
+  // Section-only match (no life modes), so women's Ambition/Occasion pieces
+  // never leak into the men's archive. Accepts both slug spellings.
   return (
-    <CollectionListing
-      eyebrow="The Edit · Genesis Man"
-      title="Genesis Man"
-      blurb="Considered menswear for the tropics — clean shirting and easy tailoring built for 32°C afternoons and monsoon air. The same designer's eye, turned toward the way a man actually moves through the day."
-      collectionSlug="genesis-man"
-      modeSlug="men"
+    <ProductBrowser
+      scope={{ sectionSlugs: ["genesis-men", "genesis-man"], modeSlugs: [] }}
+      heading={{ eyebrow: "Genesis Man · Founding Archive", title: "Genesis Men" }}
     />
   );
 }
