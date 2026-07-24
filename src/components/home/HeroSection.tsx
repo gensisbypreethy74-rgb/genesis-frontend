@@ -60,6 +60,15 @@ export default function HeroSection() {
     ? banner.title
     : "Genesis by Preethy — editorial";
 
+  // Copy comes from the banner, image failure notwithstanding — a dead image URL
+  // is no reason to drop the studio's headline back to the bundled default.
+  const heroEyebrow = banner?.eyebrow || "Genesis by Preethy · The Edit";
+  const heroTitle =
+    banner?.title ||
+    "Tropical-intelligent clothing, drawn from a life lived in heat, humidity and rain.";
+  const ctaLabel = banner?.ctaLabel || "Explore the Edit";
+  const ctaHref = banner?.ctaHref || "/products?collection=onam";
+
   // Subtle parallax: the background drifts slower than the scroll.
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
   const y = useTransform(scrollYProgress, [0, 1], ["0%", reduce ? "0%" : "16%"]);
@@ -124,7 +133,7 @@ export default function HeroSection() {
             transition={{ duration: 0.7, delay: 0.15, ease }}
             className="eyebrow mb-6 text-ivory/85"
           >
-            Genesis by Preethy · The Edit
+            {heroEyebrow}
           </motion.p>
 
           <motion.h1
@@ -133,7 +142,7 @@ export default function HeroSection() {
             transition={{ duration: 0.9, delay: 0.3, ease }}
             className="font-display font-light leading-[1.06] text-[clamp(2.4rem,6vw,4.6rem)] text-ivory"
           >
-            Tropical-intelligent clothing, drawn from a life lived in heat, humidity and rain.
+            {heroTitle}
           </motion.h1>
 
           <motion.div
@@ -142,8 +151,8 @@ export default function HeroSection() {
             transition={{ duration: 0.7, delay: 0.55, ease }}
             className="mt-10"
           >
-            <ButtonLink href="/products?collection=onam" variant="solid-ivory">
-              Explore the Edit
+            <ButtonLink href={ctaHref} variant="solid-ivory">
+              {ctaLabel}
             </ButtonLink>
           </motion.div>
         </div>

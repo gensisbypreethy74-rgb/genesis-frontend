@@ -1,14 +1,33 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import EditorialImage from "../ui/EditorialImage";
+import { fetchFounderNote, type FounderNote } from "../../lib/founder";
 
 const ease = [0.16, 1, 0.3, 1] as const;
+
+// Fallback copy — shown until the studio's version loads, and if the fetch fails.
+const DEFAULTS: FounderNote = {
+  eyebrow: "Founder's Note · Q3, At-Home & Monsoon",
+  heading: "The monsoon makes certain truths obvious.",
+  body1:
+    "Fabric either lets you breathe or it does not. A dress either stays with the body through a wet afternoon, or it begins to fight it. This season we kept returning to pieces that hold their line in humidity and still feel quiet enough for the life most women are actually living.",
+  body2:
+    "Genesis is not interested in clothing that asks for performance. It is interested in clothing that lets a woman look like herself — with more ease, and more precision, than before.",
+  signature: "— Preethy",
+  image: "/images/saree-with-wome20.png",
+};
 
 export default function FoundersNote() {
   const reduce = useReducedMotion();
   const fromLeft = reduce ? {} : { initial: { opacity: 0, x: -40 }, whileInView: { opacity: 1, x: 0 } };
   const fromRight = reduce ? {} : { initial: { opacity: 0, x: 40 }, whileInView: { opacity: 1, x: 0 } };
+
+  const [note, setNote] = useState<FounderNote>(DEFAULTS);
+  useEffect(() => {
+    fetchFounderNote().then((n) => n && setNote(n));
+  }, []);
 
   return (
     <section className="bg-ivory">
@@ -26,9 +45,9 @@ export default function FoundersNote() {
                 quality loss — and mx-auto keeps it balanced in its column.
                 Mobile keeps the full-width portrait. */}
             <EditorialImage
-              src="/images/saree-with-wome20.png"
+              src={note.image}
               placeholderLabel="Founder Portrait"
-              alt="A woman seated in a cream silk saree with floral embroidery, in a warm panelled interior"
+              alt={note.heading}
               ratio="aspect-[4/5]"
               className="mx-auto md:max-w-[380px] lg:max-w-[460px]"
             />
@@ -40,26 +59,15 @@ export default function FoundersNote() {
             viewport={{ once: true, margin: "0px 0px -12% 0px" }}
             transition={{ duration: 0.9, delay: 0.1, ease }}
           >
-            <p className="eyebrow text-bronze-deep mb-6">
-              Founder&apos;s Note · Q3, At-Home &amp; Monsoon
-            </p>
+            <p className="eyebrow text-bronze-deep mb-6">{note.eyebrow}</p>
             <h2 className="font-display font-light leading-[1.1] text-[clamp(2rem,4vw,3.25rem)] text-ink mb-8">
-              The monsoon makes certain truths obvious.
+              {note.heading}
             </h2>
             <div className="space-y-5 max-w-xl">
-              <p className="font-sans text-[15px] leading-[1.85] text-muted">
-                Fabric either lets you breathe or it does not. A dress either stays with the
-                body through a wet afternoon, or it begins to fight it. This season we kept
-                returning to pieces that hold their line in humidity and still feel quiet
-                enough for the life most women are actually living.
-              </p>
-              <p className="font-sans text-[15px] leading-[1.85] text-muted">
-                Genesis is not interested in clothing that asks for performance. It is
-                interested in clothing that lets a woman look like herself — with more ease,
-                and more precision, than before.
-              </p>
+              {note.body1 && <p className="font-sans text-[15px] leading-[1.85] text-muted">{note.body1}</p>}
+              {note.body2 && <p className="font-sans text-[15px] leading-[1.85] text-muted">{note.body2}</p>}
             </div>
-            <p className="font-display italic text-2xl text-ink mt-8">— Preethy</p>
+            {note.signature && <p className="font-display italic text-2xl text-ink mt-8">{note.signature}</p>}
           </motion.div>
         </div>
       </div>

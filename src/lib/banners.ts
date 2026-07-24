@@ -13,8 +13,11 @@ export interface StoreBanner {
   image: string;
   /** Tall crop for phones. Null when the studio hasn't supplied one. */
   mobileImage: string | null;
+  eyebrow: string;
   title: string;
   description: string;
+  ctaLabel: string;
+  ctaHref: string;
 }
 
 const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(
@@ -35,8 +38,11 @@ interface ApiBanner {
   _id: string;
   image?: string;
   mobileImage?: string;
+  eyebrow?: string;
   title?: string;
   description?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
   status?: string;
 }
 
@@ -58,7 +64,10 @@ export async function fetchActiveBanners(): Promise<StoreBanner[]> {
       id: b._id,
       image: b.image as string,
       mobileImage: isUsableImageRef(b.mobileImage) ? (b.mobileImage as string) : null,
+      eyebrow: b.eyebrow || "",
       title: b.title || "",
       description: b.description || "",
+      ctaLabel: b.ctaLabel || "",
+      ctaHref: b.ctaHref || "",
     }));
 }
