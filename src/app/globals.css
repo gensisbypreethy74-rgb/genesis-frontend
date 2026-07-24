@@ -62,12 +62,26 @@
   --ease-editorial: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+html {
+  /* Hard guard against horizontal scroll / right-side white space on mobile.
+     `clip` (not `hidden`) doesn't create a scroll container, so position:sticky
+     (the shop's filter sidebar) still works. */
+  overflow-x: clip;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-inter), "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+
+/* Media never widens its container. */
+img,
+video {
+  max-width: 100%;
 }
 
 /* Display headings default to the serif */

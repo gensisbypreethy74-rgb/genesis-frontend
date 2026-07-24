@@ -4,7 +4,7 @@ import Link from "next/link";
 import Reveal from "../ui/Reveal";
 import Logo from "../ui/Logo";
 
-const WHATSAPP_NUMBER = "916235251520";
+const WHATSAPP_NUMBER = "917403030303";
 
 const COLUMNS: { title: string; links: { label: string; href: string; external?: boolean }[] }[] = [
   {

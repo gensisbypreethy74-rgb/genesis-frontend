@@ -63,19 +63,21 @@ export default function StudioNewsletter() {
                 actually living.
               </p>
               <form onSubmit={subscribe} className="max-w-md">
-                <div className="flex items-center border-b border-ink/40 focus-within:border-ink transition-colors">
+                <div className="flex items-center gap-2 border-b border-ink/40 focus-within:border-ink transition-colors">
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Your email"
                     aria-label="Email address"
-                    className="flex-1 bg-transparent py-3 font-sans text-[15px] text-ink placeholder:text-faint focus:outline-none"
+                    /* min-w-0 lets the input shrink below its intrinsic width so
+                       the row never forces the page wider on narrow phones. */
+                    className="flex-1 min-w-0 bg-transparent py-3 font-sans text-[15px] text-ink placeholder:text-faint focus:outline-none"
                   />
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="eyebrow text-ink py-3 pl-4 hover:text-bronze transition-colors disabled:opacity-50"
+                    className="eyebrow text-ink py-3 shrink-0 whitespace-nowrap hover:text-bronze transition-colors disabled:opacity-50"
                   >
                     {submitting ? "…" : "Subscribe"}
                   </button>
