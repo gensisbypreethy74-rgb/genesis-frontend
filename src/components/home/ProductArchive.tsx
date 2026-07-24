@@ -6,23 +6,46 @@ import Reveal from "../ui/Reveal";
 import { ButtonLink } from "../ui/Button";
 import ProductCard from "../ui/ProductCard";
 import { type Product } from "../../lib/product";
+import { fetchMoment, type SeasonalCollection } from "../../lib/moment";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/api\/?$/, "");
 
+// Text fallbacks — used until the studio's seasonal settings load / if none set.
+const FALLBACK: SeasonalCollection = {
+  eyebrow: "Now · The Onam Collection",
+  heading: "Named for the flowers of the season.",
+  description: "",
+  ctaLabel: "View All Pieces",
+  ctaHref: "/products",
+  productIds: [],
+};
+
 export default function ProductArchive() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [seasonal, setSeasonal] = useState<SeasonalCollection>(FALLBACK);
   const [loading, setLoading] = useState(true);
   const scroller = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    axios
-      .get(`${API_BASE}/api/v1/products`)
-      .then((res) => {
-        const all: Product[] = res.data?.data || [];
-        const landing = all.filter((p) => p.showOnLandingPage);
-        setProducts((landing.length ? landing : all).slice(0, 10));
+    Promise.all([
+      axios.get(`${API_BASE}/api/v1/products`).then((r) => (r.data?.data as Product[]) || []),
+      fetchMoment(),
+    ])
+      .then(([all, moment]) => {
+        const s = moment?.seasonal;
+        if (s) setSeasonal(s);
+        const ids = s?.productIds ?? [];
+        if (ids.length) {
+          // Assigned + ordered: keep the studio's exact order, drop any deleted ids.
+          const byId = new Map(all.map((p) => [p._id, p]));
+          setProducts(ids.map((id) => byId.get(id)).filter(Boolean) as Product[]);
+        } else {
+          // Nothing assigned yet: fall back to landing-page pieces.
+          const landing = all.filter((p) => p.showOnLandingPage);
+          setProducts((landing.length ? landing : all).slice(0, 10));
+        }
       })
-      .catch(() => { })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
@@ -36,10 +59,15 @@ export default function ProductArchive() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-12">
           <Reveal>
-            <p className="eyebrow text-bronze-deep mb-4">Now · The Onam Collection</p>
+            <p className="eyebrow text-bronze-deep mb-4">{seasonal.eyebrow}</p>
             <h2 className="font-display font-light leading-[1.08] text-[clamp(2rem,4.5vw,3.5rem)] text-ink max-w-2xl">
-              Named for the flowers of the season.
+              {seasonal.heading}
             </h2>
+            {seasonal.description && (
+              <p className="font-sans text-[15px] leading-[1.85] text-muted max-w-xl mt-5">
+                {seasonal.description}
+              </p>
+            )}
           </Reveal>
           <div className="flex items-center gap-6 shrink-0">
             <div className="hidden sm:flex items-center gap-2">
@@ -58,8 +86,8 @@ export default function ProductArchive() {
                 →
               </button>
             </div>
-            <ButtonLink href="/products" variant="outline" size="sm" arrow={false}>
-              View All Pieces
+            <ButtonLink href={seasonal.ctaHref || "/products"} variant="outline" size="sm" arrow={false}>
+              {seasonal.ctaLabel || "View All Pieces"}
             </ButtonLink>
           </div>
         </div>

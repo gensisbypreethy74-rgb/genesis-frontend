@@ -73,8 +73,21 @@ function TileSkeleton({ index }: { index: number }) {
   );
 }
 
+const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(
+  /\/api\/?$/,
+  ""
+);
+
+const SECTION_DEFAULTS = {
+  eyebrow: "The Edit",
+  heading: "Find your way in.",
+  shopLabel: "Shop All",
+  shopHref: "/products",
+};
+
 export default function CategoryGrid() {
   const [categories, setCategories] = useState<StoreCategory[] | null>(null);
+  const [section, setSection] = useState(SECTION_DEFAULTS);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,6 +99,13 @@ export default function CategoryGrid() {
         console.error("Failed to load categories", err);
         if (!cancelled) setCategories([]);
       });
+    // Editable section copy — falls back to the defaults on any failure.
+    fetch(`${API_ORIGIN}/api/v1/category-section`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (!cancelled && j?.data) setSection({ ...SECTION_DEFAULTS, ...j.data });
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -104,16 +124,16 @@ export default function CategoryGrid() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-12">
           <div>
-            <p className="eyebrow text-bronze-deep mb-4">The Edit</p>
+            <p className="eyebrow text-bronze-deep mb-4">{section.eyebrow}</p>
             <h2 className="font-display font-light leading-[1.08] text-[clamp(2rem,4.5vw,3.5rem)] text-ink max-w-2xl">
-              Find your way in.
+              {section.heading}
             </h2>
           </div>
           <Link
-            href="/products"
+            href={section.shopHref || "/products"}
             className="eyebrow text-ink link-underline self-start sm:self-auto shrink-0"
           >
-            Shop All →
+            {section.shopLabel} →
           </Link>
         </div>
 

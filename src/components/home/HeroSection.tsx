@@ -157,23 +157,6 @@ export default function HeroSection() {
           </motion.div>
         </div>
       </div>
-
-      {/* Scroll cue — desktop only.
-          It's centred, so on the shorter mobile hero it landed beside the
-          left-aligned CTA and read as clutter. It's also redundant there: the
-          next section now crests the fold, which invites the scroll by itself.
-          On desktop the hero still fills the screen, so the cue earns its place. */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1, duration: 1 }}
-        className="hidden sm:block absolute bottom-6 left-1/2 -translate-x-1/2 z-10"
-      >
-        <div className="eyebrow text-ivory/70 flex flex-col items-center gap-2">
-          <span>Scroll</span>
-          <span className="block w-px h-8 bg-current opacity-40" />
-        </div>
-      </motion.div>
     </section>
   );
 }

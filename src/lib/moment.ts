@@ -4,6 +4,15 @@ export interface MomentStep {
   description: string;
 }
 
+export interface SeasonalCollection {
+  eyebrow: string;
+  heading: string;
+  description: string;
+  ctaLabel: string;
+  ctaHref: string;
+  productIds: string[];
+}
+
 export interface Moment {
   eyebrow: string;
   title: string;
@@ -12,6 +21,7 @@ export interface Moment {
   shopHref: string;
   explainerEyebrow: string;
   steps: MomentStep[];
+  seasonal?: SeasonalCollection;
 }
 
 /** Fetch the editable Moment section. null on failure → components use their defaults. */

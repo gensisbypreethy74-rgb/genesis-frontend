@@ -17,9 +17,9 @@ export const dynamic = "force-dynamic";
  *   2. Provenance Strip
  *   3. Founder's Note
  *   4. The Edit            (CategoryGrid,   id="the-edit")  — live categories
- *   5. The Archive         (ProductArchive, id="the-archive") — collection carousel
- *   6. The Moment          (TheMoment,      id="the-moment") — dark launch block
- *   7. Moment Explainer    (MomentExplainer) — how the drop model works
+ *   5. The Moment          (TheMoment,      id="the-moment") — dark launch block
+ *   6. Moment Explainer    (MomentExplainer) — how the drop model works
+ *   7. The Archive         (ProductArchive, id="the-archive") — collection carousel
  *   8. Story               (StudioNotes,    id="story")     — Studio Notes · The Designer's Eye
  *   9. Newsletter
  *   10. Footer (global, app/layout.tsx)
@@ -34,9 +34,9 @@ export default async function Home() {
       <ProvenanceStrip />
       <FoundersNote />
       <CategoryGrid />
-      <ProductArchive />
       <TheMoment moment={moment} />
       <MomentExplainer moment={moment} />
+      <ProductArchive />
       <StudioNotes />
       <StudioNewsletter />
     </main>
