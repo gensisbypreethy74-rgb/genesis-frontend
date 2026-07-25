@@ -9,7 +9,7 @@ import Reveal from "../ui/Reveal";
 import { Button } from "../ui/Button";
 import Breadcrumbs from "../common/Breadcrumbs";
 import { type Product, fromPrice } from "../../lib/product";
-import { slugify } from "../../lib/categories";
+import { slugify, FIXED_EDIT_CATEGORIES } from "../../lib/categories";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -56,7 +56,7 @@ interface ProductBrowserProps {
   /** When set, only pieces belonging to this edit section are shown. */
   scope?: BrowserScope;
   /** Fixed header for edit pages; the shop derives its own. */
-  heading?: { eyebrow: string; title: string };
+  heading?: { eyebrow: string; title: string; description?: string };
 }
 
 // ─── Filter panel ─────────────────────────────────────────────────────────────
@@ -147,6 +147,8 @@ function BrowserContent({ scope, heading }: ProductBrowserProps) {
   const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [sortBy, setSortBy] = useState("popularity");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Admin-editable description for this fixed edit section (null until loaded).
+  const [editDesc, setEditDesc] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -175,10 +177,13 @@ function BrowserContent({ scope, heading }: ProductBrowserProps) {
 
         if (prodJson?.success && Array.isArray(prodJson.data)) {
           const activeCatNames = activeBackendCats.map((c: any) => c.name.toLowerCase());
+          // The four fixed THE EDIT categories aren't Category docs, so allow
+          // them through the active-category visibility gate too.
+          const allowed = [...activeCatNames, ...FIXED_EDIT_CATEGORIES];
           const visibleProducts =
             activeCatNames.length > 0
               ? prodJson.data.filter((p: any) =>
-                  activeCatNames.includes((p.category || "").toLowerCase())
+                  allowed.includes((p.category || "").toLowerCase())
                 )
               : prodJson.data;
 
@@ -209,6 +214,29 @@ function BrowserContent({ scope, heading }: ProductBrowserProps) {
     fetchProducts();
   }, []);
 
+  // Fixed edit sections carry an admin-editable description, keyed by section
+  // slug. An empty value hides the description (the header guards on it).
+  useEffect(() => {
+    if (!scope) return;
+    const KEY: Record<string, string> = {
+      within: "within",
+      beyond: "beyond",
+      "genesis-men": "genesisMen",
+      archive: "archive",
+    };
+    const key = KEY[scope.sectionSlugs[0]];
+    if (!key) return;
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL
+      ? process.env.NEXT_PUBLIC_API_URL.replace("/api", "")
+      : "http://localhost:5000";
+    axios
+      .get(`${baseUrl}/api/v1/edit-sections`)
+      .then((r) => {
+        if (r.data?.success) setEditDesc(r.data.data[key] ?? "");
+      })
+      .catch(() => {});
+  }, [scope]);
+
   // Sync category/search from URL
   useEffect(() => {
     const category = searchParams.get("category");
@@ -226,6 +254,7 @@ function BrowserContent({ scope, heading }: ProductBrowserProps) {
     const modes = scope.modeSlugs.map(slugify);
     return products.filter((p) => {
       if (p.editSection && sections.includes(slugify(p.editSection))) return true;
+      if (p.category && sections.includes(slugify(p.category))) return true;
       if (p.collectionName && sections.includes(slugify(p.collectionName))) return true;
       if (modes.length && p.lifeMode && modes.includes(slugify(p.lifeMode))) return true;
       return false;
@@ -351,6 +380,8 @@ function BrowserContent({ scope, heading }: ProductBrowserProps) {
   ]);
 
   const { eyebrow, title } = heading ?? derived;
+  // Admin description wins once loaded (empty = hidden); else the page's default.
+  const description = editDesc !== null ? editDesc : heading?.description;
 
   const panelProps: FilterPanelProps = {
     categories: categoriesWithCounts,
@@ -372,6 +403,11 @@ function BrowserContent({ scope, heading }: ProductBrowserProps) {
           <h1 className="font-display font-light text-[clamp(2rem,4.5vw,3.5rem)] leading-[1.08] text-ink mt-4">
             {title}
           </h1>
+          {description && (
+            <p className="font-sans text-[15px] leading-relaxed text-muted mt-5 max-w-2xl">
+              {description}
+            </p>
+          )}
           <p className="font-sans text-sm text-muted mt-4">
             {loading ? "Loading the edit…" : countLabel}
           </p>

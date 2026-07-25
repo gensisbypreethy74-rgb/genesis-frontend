@@ -30,6 +30,13 @@ const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").
  * `?category=` must slugify identically — hence one shared implementation
  * rather than a copy per page.
  */
+/**
+ * The four fixed THE EDIT categories (lowercased). They aren't Category-model
+ * docs, so any code that gates products to *active* categories must let these
+ * through too — otherwise a piece filed under one becomes unreachable.
+ */
+export const FIXED_EDIT_CATEGORIES = ["within", "beyond", "genesis men", "archive"];
+
 export const slugify = (s?: string) =>
   (s || "")
     .toLowerCase()

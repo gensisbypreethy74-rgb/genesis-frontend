@@ -85,19 +85,26 @@ export default function StoryClient({ payload }: { payload: StoryPayload | null 
   const hasLive = sections.length > 0;
   const settings = payload?.settings ?? {};
 
-  const introEyebrow = settings.introEyebrow || "Story · Genesis by Preethy";
+  const introEyebrow = settings.introEyebrow || "Our Story";
 
   return (
     <main className="bg-ivory">
-      {/* Slim top strip — clears the fixed header and orients the visitor */}
-      <div className="pt-[100px] lg:pt-[128px]">
+      {/* Intro section — centred label, heading and description */}
+      <div className="pt-[92px] lg:pt-[116px]">
         <div className="max-w-[1500px] mx-auto px-6 sm:px-10 lg:px-16">
           <Breadcrumbs />
-          <p className="eyebrow text-bronze-deep mt-6">{introEyebrow}</p>
+        </div>
+        <div className="max-w-3xl mx-auto px-6 text-center pt-5 sm:pt-8 pb-4 sm:pb-6">
+          <p className="eyebrow text-bronze-deep">{introEyebrow}</p>
           {settings.introHeading && (
-            <h1 className="font-display font-light leading-[1.05] text-[clamp(2rem,4.5vw,3.5rem)] text-ink max-w-4xl mt-4">
+            <h1 className="font-display font-light leading-[1.1] text-[clamp(1.9rem,4.5vw,3.1rem)] text-ink mt-4">
               {settings.introHeading}
             </h1>
+          )}
+          {settings.introDescription && (
+            <p className="font-sans text-[15px] leading-[1.85] text-muted max-w-xl mx-auto mt-4">
+              {settings.introDescription}
+            </p>
           )}
         </div>
       </div>

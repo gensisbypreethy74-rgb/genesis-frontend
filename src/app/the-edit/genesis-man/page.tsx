@@ -6,7 +6,12 @@ export default function GenesisManPage() {
   return (
     <ProductBrowser
       scope={{ sectionSlugs: ["genesis-men", "genesis-man"], modeSlugs: [] }}
-      heading={{ eyebrow: "Genesis Man · Founding Archive", title: "Genesis Men" }}
+      heading={{
+        eyebrow: "Genesis Man · Founding Archive",
+        title: "Genesis Men",
+        description:
+          "The founding Genesis Man archive: botanical embroidery, a single placement, a mandarin collar, a knotted closure. The same three laws, a new set of shoulders.",
+      }}
     />
   );
 }

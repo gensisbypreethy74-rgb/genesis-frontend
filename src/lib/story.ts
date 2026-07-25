@@ -41,6 +41,7 @@ export interface StorySettings {
   slug?: string;
   introEyebrow?: string;
   introHeading?: string;
+  introDescription?: string;
 }
 
 export interface StoryPayload {
