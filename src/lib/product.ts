@@ -10,6 +10,19 @@ export interface Variant {
   sku?: string;
 }
 
+/**
+ * One row of a product's size chart. Measurements are CENTIMETRES, always —
+ * the admin enters cm and nothing else, and `SizeChart` derives inches at
+ * render time so the two units cannot drift apart.
+ */
+export interface SizeChartRow {
+  size: string;
+  bust?: number;
+  waist?: number;
+  hip?: number;
+  length?: number;
+}
+
 export interface Product {
   _id: string;
   name: string;
@@ -20,6 +33,8 @@ export interface Product {
   lifeMode?: string;
   editSection?: string; // "Within" | "Beyond" | "Genesis Men" | "Archive"
   limited?: boolean;    // renders the "LIMITED PIECE" tag
+  materials?: string[]; // fabrics, e.g. ["Cotton", "Linen"] — drives the shop's Material filter
+  sizeChart?: SizeChartRow[]; // per-piece body measurements, in cm
   description?: string;
   keyFeatures?: string;
   variants?: Variant[];
@@ -30,6 +45,29 @@ export interface Product {
   status?: string;
   showOnLandingPage?: boolean;
   createdAt?: string;
+}
+
+/**
+ * One product by id, fetched server-side. Returns null on a 404, a bad id, or
+ * an unreachable backend — every caller renders a fallback rather than an
+ * error page, because a missing size chart should never take a page down.
+ */
+export async function fetchProductById(id: string): Promise<Product | null> {
+  const origin = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(
+    /\/api\/?$/,
+    ""
+  );
+  try {
+    // Studio edits must show up immediately; this page is never prerendered.
+    const res = await fetch(`${origin}/api/v1/products/${encodeURIComponent(id)}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json?.success && json.data ? (json.data as Product) : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Lowest variant price (what a shopper pays "from"). */

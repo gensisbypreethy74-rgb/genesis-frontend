@@ -1,32 +1,27 @@
 import Image from "next/image";
-import logoGold from "../../../public/images/logo-wordmark.png";
-import logoInk from "../../../public/images/logo-wordmark-ink.png";
+import logoBronze from "../../../public/images/logo-wordmark.png";
 
 /**
- * The Genesis by Preethy wordmark.
+ * The Genesis by Preethy wordmark — metallic bronze, everywhere.
  *
- * Two variants of one artwork, because the gold cannot recolour the way the
- * text wordmark it replaces did:
- *   · `gold` — the brand mark, for dark grounds (hero, dark panels). ~7:1.
- *   · `ink`  — the same letterforms in soft-black, for ivory/cream grounds.
- *              The gold reads at only ~2:1 on ivory, which looks washed out.
+ * One artwork, one tone: the bronze mark is the brand identity and is used on
+ * dark grounds (hero) and ivory/cream grounds (drawer, footer) alike. The old
+ * soft-black `ink` variant is retired.
  *
- * Both are trimmed from `public/images/Logo.png`, whose 1080×1080 canvas is 84%
- * empty padding — sizing that original by height would render the mark tiny.
+ * Trimmed from `public/images/Logo.png`, whose 1080×1080 canvas is 84% empty
+ * padding — sizing that original by height would render the mark tiny.
  */
 export default function Logo({
-  tone = "ink",
   className = "",
   priority = false,
 }: {
-  tone?: "gold" | "ink";
   /** Set the height here; width follows the 2.99:1 aspect automatically. */
   className?: string;
   priority?: boolean;
 }) {
   return (
     <Image
-      src={tone === "gold" ? logoGold : logoInk}
+      src={logoBronze}
       alt="Genesis by Preethy"
       priority={priority}
       // Height comes from the caller; `w-auto` keeps the aspect honest.

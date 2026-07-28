@@ -217,7 +217,10 @@ export default function StorySectionView({ section: s }: { section: StorySection
               src={s.image}
               placeholderLabel={s.eyebrow || s.title || "Genesis"}
               alt={s.imageAlt || ""}
-              ratio="aspect-[4/5]"
+              // Square rather than 4:5 portrait. At half of a 1500px page these
+              // frames ran ~800px tall, so the text sat centred against a lot of
+              // empty column; this takes ~20% off the height.
+              ratio="aspect-[1/1]"
             />
           </motion.div>
         </div>

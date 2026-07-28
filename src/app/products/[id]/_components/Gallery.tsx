@@ -22,7 +22,10 @@ export default function Gallery({ images, name }: GalleryProps) {
   const [active, setActive] = useState(0);
 
   return (
-    <div className="flex flex-col gap-3">
+    // The gallery column is 58% of a 1500px page, so an uncapped 4:5 frame runs
+    // ~880px tall on a large screen — taller than the viewport. Capped on lg up;
+    // phones and tablets still get the full column width.
+    <div className="flex flex-col gap-3 lg:max-w-[540px]">
       {/* Main frame */}
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-sand img-placeholder">
         {/* No photography yet — show the warm placeholder tone rather than a
@@ -41,7 +44,7 @@ export default function Gallery({ images, name }: GalleryProps) {
             alt={i === active ? `${name} — view ${i + 1}` : ""}
             aria-hidden={i !== active}
             fill
-            sizes="(max-width: 1024px) 100vw, 58vw"
+            sizes="(max-width: 1024px) 100vw, 540px"
             priority={i === 0}
             unoptimized
             className={`object-cover transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
@@ -65,18 +68,20 @@ export default function Gallery({ images, name }: GalleryProps) {
               onClick={() => setActive(i)}
               aria-label={`View image ${i + 1} of ${images.length}`}
               aria-current={i === active}
-              className={`relative h-20 w-16 shrink-0 cursor-pointer overflow-hidden bg-sand border transition-[opacity,border-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+              // 4:5, matching the main frame — a thumbnail that crops differently
+              // from the photo it opens reads as a different picture.
+              className={`relative h-[120px] w-24 shrink-0 cursor-pointer overflow-hidden bg-sand border transition-[opacity,border-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                 i === active
                   ? "border-ink opacity-100"
                   : "border-transparent opacity-60 hover:opacity-100"
               }`}
             >
               <Image
-                src={cldOptimize(src, 200)}
+                src={cldOptimize(src, 300)}
                 alt=""
                 aria-hidden
                 fill
-                sizes="64px"
+                sizes="96px"
                 unoptimized
                 className="object-cover"
               />

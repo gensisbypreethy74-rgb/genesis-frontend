@@ -24,36 +24,15 @@ const EDIT_SUBPAGES = [
   { href: "/the-edit/archive", label: "Archive" },
 ];
 
-/**
- * `light` means the bar is sitting over the hero image; once scrolled it's on
- * ivory. The old text wordmark flipped ivory→ink for that. The logo can't
- * recolour, so we cross-fade the gold mark (over imagery) into the ink mark
- * (on ivory) — gold on ivory reads at only ~2:1 and looks washed out.
- *
- * Both are stacked and faded rather than swapped so the transition matches the
- * 300ms colour transition everything else in the bar uses.
- */
-function Wordmark({ light }: { light: boolean }) {
+/** One bronze mark over the hero and on ivory alike — no tone swap. */
+function Wordmark() {
   return (
     <Link
       href="/"
       aria-label="Genesis by Preethy — home"
       className="group relative block"
     >
-      <Logo
-        tone="gold"
-        priority
-        className={`h-[30px] sm:h-[34px] lg:h-[38px] transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-          light ? "opacity-100" : "opacity-0"
-        }`}
-      />
-      <Logo
-        tone="ink"
-        priority
-        className={`absolute inset-0 h-[30px] sm:h-[34px] lg:h-[38px] transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-          light ? "opacity-0" : "opacity-100"
-        }`}
-      />
+      <Logo priority className="h-[30px] sm:h-[34px] lg:h-[38px]" />
     </Link>
   );
 }
@@ -257,7 +236,7 @@ export default function Navbar() {
           </div>
 
           {/* CENTER — wordmark */}
-          <Wordmark light={!solid} />
+          <Wordmark />
 
           {/* RIGHT — utilities (text labels) */}
           <div className={`flex items-center justify-end gap-5 sm:gap-7 ${linkColor}`}>
@@ -358,8 +337,7 @@ export default function Navbar() {
               className="fixed top-0 left-0 bottom-0 z-50 w-[82%] max-w-[360px] bg-ivory flex flex-col lg:hidden"
             >
               <div className="flex items-center justify-between h-[68px] px-6 border-b border-line">
-                {/* Drawer sits on ivory, so the ink mark. */}
-                <Logo tone="ink" className="h-[26px]" />
+                <Logo className="h-[26px]" />
                 <button onClick={() => setMobileOpen(false)} aria-label="Close menu" className="text-ink">
                   <Ic.close width={22} height={22} />
                 </button>

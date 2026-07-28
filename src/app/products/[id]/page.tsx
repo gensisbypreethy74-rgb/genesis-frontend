@@ -7,13 +7,14 @@ import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
 import { Check, MessageCircle } from "lucide-react";
 import { useCart } from "../../../context/CartContext";
-import { formatINR } from "../../../lib/product";
+import { formatINR, type SizeChartRow } from "../../../lib/product";
 import { FIXED_EDIT_CATEGORIES } from "../../../lib/categories";
 import { Button } from "../../../components/ui/Button";
 import Reveal from "../../../components/ui/Reveal";
 import Gallery from "./_components/Gallery";
 import SizeSelector from "./_components/SizeSelector";
 import Accordion from "./_components/Accordion";
+import SizeChart from "../../../components/ui/SizeChart";
 import { CARE_ICON_MAP, isCareIcon, type CareIcon } from "./_components/careIcons";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -87,6 +88,7 @@ interface ApiProduct {
   studioNotes?: string;
   materialText?: string;
   specs?: Partial<Spec>[];
+  sizeChart?: Partial<SizeChartRow>[];
   fitFooter?: string;
   careIcons?: string[];
   careText?: string;
@@ -108,6 +110,7 @@ interface Product {
   studioNotes: string;
   materialText: string;
   specs: Spec[];
+  sizeChart: SizeChartRow[];
   fitFooter: string;
   careIcons: CareIcon[];
   careText: string;
@@ -191,6 +194,11 @@ export default function ProductDetailPage() {
               specs: Array.isArray(p.specs)
                 ? p.specs.filter((s): s is Spec => Boolean(s?.label && s?.value))
                 : [],
+              // A row needs a size label to have a leftmost cell; SizeChart
+              // drops any measurement column that ends up empty.
+              sizeChart: Array.isArray(p.sizeChart)
+                ? p.sizeChart.filter((r): r is SizeChartRow => Boolean(r?.size))
+                : [],
               fitFooter: p.fitFooter || "",
               // Older rows may hold anything; keep only keys we can draw.
               careIcons: Array.isArray(p.careIcons) ? p.careIcons.filter(isCareIcon) : [],
@@ -263,6 +271,7 @@ export default function ProductDetailPage() {
   const collectionLabel = product.collectionName || product.category;
   const hasMaterial = !!(product.materialText || product.specs.length || product.fitFooter);
   const hasCare = !!(product.careIcons.length || product.careText);
+  const hasSizeChart = product.sizeChart.length > 0;
   const shippingText = product.shippingReturns || DEFAULT_SHIPPING_RETURNS;
 
   const handleAddToCart = () => {
@@ -366,6 +375,7 @@ export default function ProductDetailPage() {
                   selected={selectedSize}
                   onSelect={setSelectedSize}
                   modelNote={product.modelNote}
+                  productId={product.id}
                 />
               </div>
             )}
@@ -434,6 +444,12 @@ export default function ProductDetailPage() {
 
             {/* Accordions */}
             <div className={product.studioNotes ? "border-t border-line" : "mt-2"}>
+              {hasSizeChart && (
+                <Accordion title="Size Chart">
+                  <SizeChart rows={product.sizeChart} />
+                </Accordion>
+              )}
+
               {hasMaterial && (
                 <Accordion title="Material & Fit">
                   {product.materialText && (

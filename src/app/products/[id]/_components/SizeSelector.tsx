@@ -18,6 +18,8 @@ interface SizeSelectorProps {
   selected: number | null;
   onSelect: (index: number) => void;
   modelNote?: string;
+  /** Carried to /size-guide so it shows this piece's chart, not a generic one. */
+  productId?: string;
 }
 
 /**
@@ -29,6 +31,7 @@ export default function SizeSelector({
   selected,
   onSelect,
   modelNote,
+  productId,
 }: SizeSelectorProps) {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const labelId = useId();
@@ -79,7 +82,7 @@ export default function SizeSelector({
           Size
         </span>
         <Link
-          href="/size-guide"
+          href={productId ? `/size-guide?product=${encodeURIComponent(productId)}` : "/size-guide"}
           className="link-underline font-sans text-[11px] tracking-[0.12em] text-muted transition-colors duration-300 hover:text-ink"
         >
           Find your size

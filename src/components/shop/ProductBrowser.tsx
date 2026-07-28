@@ -13,21 +13,6 @@ import { slugify, FIXED_EDIT_CATEGORIES } from "../../lib/categories";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
-interface PriceRange {
-  id: string;
-  label: string;
-  min: number;
-  max: number;
-}
-
-const PRICE_RANGES: PriceRange[] = [
-  { id: "under-50", label: "Under ₹50", min: 0, max: 50 },
-  { id: "50-100", label: "₹50 – ₹100", min: 50, max: 100 },
-  { id: "100-200", label: "₹100 – ₹200", min: 100, max: 200 },
-  { id: "200-500", label: "₹200 – ₹500", min: 200, max: 500 },
-  { id: "over-500", label: "Over ₹500", min: 500, max: Infinity },
-];
-
 const SORT_OPTIONS = [
   { id: "popularity", label: "Featured" },
   { id: "price-asc", label: "Price: Low to High" },
@@ -61,65 +46,88 @@ interface ProductBrowserProps {
 
 // ─── Filter panel ─────────────────────────────────────────────────────────────
 
+/** One checkable option in a filter group. */
+interface Facet {
+  id: string;
+  label: string;
+  count: number;
+}
+
 interface FilterPanelProps {
-  categories: { id: string; label: string; count: number }[];
+  categories: Facet[];
+  materials: Facet[];
   selectedCategories: string[];
-  selectedPriceRanges: string[];
+  selectedMaterials: string[];
   onToggleCategory: (id: string) => void;
-  onTogglePriceRange: (id: string) => void;
+  onToggleMaterial: (id: string) => void;
+}
+
+/** One titled group of checkboxes. Both filter groups render identically. */
+function FilterGroup({
+  title,
+  options,
+  selected,
+  onToggle,
+  empty,
+}: {
+  title: string;
+  options: Facet[];
+  selected: string[];
+  onToggle: (id: string) => void;
+  /** Shown when there are no options; omit to hide the group entirely. */
+  empty?: string;
+}) {
+  if (options.length === 0 && !empty) return null;
+
+  return (
+    <div>
+      <p className="eyebrow text-bronze-deep pb-4 mb-4 border-b border-line">{title}</p>
+      <div className="flex flex-col gap-3.5">
+        {options.length === 0 && <p className="font-sans text-sm text-faint">{empty}</p>}
+        {options.map((opt) => (
+          <label key={opt.id} className="flex items-center gap-3 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={selected.includes(opt.id)}
+              onChange={() => onToggle(opt.id)}
+              className="h-3.5 w-3.5 accent-forest cursor-pointer"
+            />
+            <span className="font-sans text-sm text-muted group-hover:text-ink transition-colors">
+              {opt.label} <span className="text-faint">({opt.count})</span>
+            </span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function FilterPanel({
   categories,
+  materials,
   selectedCategories,
-  selectedPriceRanges,
+  selectedMaterials,
   onToggleCategory,
-  onTogglePriceRange,
+  onToggleMaterial,
 }: FilterPanelProps) {
   return (
     <div className="space-y-10">
-      {/* Categories */}
-      <div>
-        <p className="eyebrow text-bronze-deep pb-4 mb-4 border-b border-line">Category</p>
-        <div className="flex flex-col gap-3.5">
-          {categories.length === 0 && (
-            <p className="font-sans text-sm text-faint">No categories yet.</p>
-          )}
-          {categories.map((cat) => (
-            <label key={cat.id} className="flex items-center gap-3 cursor-pointer group">
-              <input
-                type="checkbox"
-                checked={selectedCategories.includes(cat.id)}
-                onChange={() => onToggleCategory(cat.id)}
-                className="h-3.5 w-3.5 accent-forest cursor-pointer"
-              />
-              <span className="font-sans text-sm text-muted group-hover:text-ink transition-colors">
-                {cat.label} <span className="text-faint">({cat.count})</span>
-              </span>
-            </label>
-          ))}
-        </div>
-      </div>
+      <FilterGroup
+        title="Category"
+        options={categories}
+        selected={selectedCategories}
+        onToggle={onToggleCategory}
+        empty="No categories yet."
+      />
 
-      {/* Price */}
-      <div>
-        <p className="eyebrow text-bronze-deep pb-4 mb-4 border-b border-line">Price</p>
-        <div className="flex flex-col gap-3.5">
-          {PRICE_RANGES.map((range) => (
-            <label key={range.id} className="flex items-center gap-3 cursor-pointer group">
-              <input
-                type="checkbox"
-                checked={selectedPriceRanges.includes(range.id)}
-                onChange={() => onTogglePriceRange(range.id)}
-                className="h-3.5 w-3.5 accent-forest cursor-pointer"
-              />
-              <span className="font-sans text-sm text-muted group-hover:text-ink transition-colors">
-                {range.label}
-              </span>
-            </label>
-          ))}
-        </div>
-      </div>
+      {/* Materials come from the pieces themselves, so an untagged catalogue
+          shows no group at all rather than an empty heading. */}
+      <FilterGroup
+        title="Material"
+        options={materials}
+        selected={selectedMaterials}
+        onToggle={onToggleMaterial}
+      />
     </div>
   );
 }
@@ -143,7 +151,7 @@ function BrowserContent({ scope, heading }: ProductBrowserProps) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     initialCategory ? [initialCategory] : []
   );
-  const [selectedPriceRanges, setSelectedPriceRanges] = useState<string[]>([]);
+  const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [sortBy, setSortBy] = useState("popularity");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -200,6 +208,7 @@ function BrowserContent({ scope, heading }: ProductBrowserProps) {
             lifeMode: p.lifeMode,
             editSection: p.editSection,
             limited: p.limited,
+            materials: Array.isArray(p.materials) ? p.materials : [],
             description: p.keyFeatures || p.description || "",
             createdAt: p.createdAt,
           }));
@@ -266,9 +275,9 @@ function BrowserContent({ scope, heading }: ProductBrowserProps) {
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
     );
 
-  const togglePriceRange = (id: string) =>
-    setSelectedPriceRanges((prev) =>
-      prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
+  const toggleMaterial = (id: string) =>
+    setSelectedMaterials((prev) =>
+      prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]
     );
 
   const categoriesWithCounts = useMemo(
@@ -283,13 +292,31 @@ function BrowserContent({ scope, heading }: ProductBrowserProps) {
     [categories, scoped, scope]
   );
 
-  const matchesPrice = (price: number) => {
-    if (selectedPriceRanges.length === 0) return true;
-    return selectedPriceRanges.some((id) => {
-      const range = PRICE_RANGES.find((r) => r.id === id);
-      return range ? price >= range.min && price < range.max : true;
-    });
-  };
+  /**
+   * Material options, built from the pieces in view rather than a fixed list —
+   * a fabric the studio types into a product becomes a filter option with no
+   * code change, and one that stops being used disappears on its own.
+   *
+   * Keyed by slug so "Cotton", "cotton" and "COTTON" collapse into one option;
+   * the label shown is whichever spelling was seen first. A piece is counted
+   * once per option even if it carries the same fabric twice.
+   */
+  const materialFacets = useMemo(() => {
+    const byId = new Map<string, Facet>();
+    for (const p of scoped) {
+      const counted = new Set<string>();
+      for (const raw of p.materials || []) {
+        const label = (raw || "").trim();
+        const id = slugify(label);
+        if (!id || counted.has(id)) continue;
+        counted.add(id);
+        const existing = byId.get(id);
+        if (existing) existing.count += 1;
+        else byId.set(id, { id, label, count: 1 });
+      }
+    }
+    return [...byId.values()].sort((a, b) => a.label.localeCompare(b.label));
+  }, [scoped]);
 
   const anyHasLifeMode = useMemo(() => scoped.some((p) => !!p.lifeMode), [scoped]);
   const anyHasCollection = useMemo(
@@ -302,6 +329,10 @@ function BrowserContent({ scope, heading }: ProductBrowserProps) {
       const catOk =
         selectedCategories.length === 0 ||
         selectedCategories.includes(slugify(p.category));
+
+      const materialOk =
+        selectedMaterials.length === 0 ||
+        (p.materials || []).some((m) => selectedMaterials.includes(slugify(m)));
 
       const searchOk =
         searchTerm === "" ||
@@ -317,7 +348,7 @@ function BrowserContent({ scope, heading }: ProductBrowserProps) {
         slugify(p.collectionName) === collectionSlug ||
         slugify(p.season) === collectionSlug;
 
-      return catOk && matchesPrice(fromPrice(p)) && searchOk && modeOk && collectionOk;
+      return catOk && materialOk && searchOk && modeOk && collectionOk;
     });
 
     switch (sortBy) {
@@ -328,11 +359,10 @@ function BrowserContent({ scope, heading }: ProductBrowserProps) {
       default:
         return result;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     scoped,
     selectedCategories,
-    selectedPriceRanges,
+    selectedMaterials,
     searchTerm,
     sortBy,
     modeSlug,
@@ -385,10 +415,11 @@ function BrowserContent({ scope, heading }: ProductBrowserProps) {
 
   const panelProps: FilterPanelProps = {
     categories: categoriesWithCounts,
+    materials: materialFacets,
     selectedCategories,
-    selectedPriceRanges,
+    selectedMaterials,
     onToggleCategory: toggleCategory,
-    onTogglePriceRange: togglePriceRange,
+    onToggleMaterial: toggleMaterial,
   };
 
   const countLabel = `${filtered.length} ${filtered.length === 1 ? "piece" : "pieces"}`;
@@ -524,7 +555,7 @@ function BrowserContent({ scope, heading }: ProductBrowserProps) {
                     size="sm"
                     onClick={() => {
                       setSelectedCategories([]);
-                      setSelectedPriceRanges([]);
+                      setSelectedMaterials([]);
                       setSearchTerm("");
                     }}
                   >

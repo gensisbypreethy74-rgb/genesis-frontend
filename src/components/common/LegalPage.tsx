@@ -59,10 +59,12 @@ export default function LegalPage({ eyebrow, title, updated, children }: LegalPa
               "[&_a]:text-ink [&_a]:underline [&_a]:decoration-line [&_a]:underline-offset-4 [&_a]:transition-colors hover:[&_a]:text-bronze",
               // strong
               "[&_strong]:text-ink [&_strong]:font-medium",
-              // tables
-              "[&_table]:w-full [&_table]:my-8 [&_table]:border-collapse [&_table]:font-sans [&_table]:text-[14px]",
-              "[&_th]:text-left [&_th]:font-sans [&_th]:eyebrow [&_th]:text-bronze-deep [&_th]:py-3 [&_th]:pr-4 [&_th]:border-b [&_th]:border-ink/20",
-              "[&_td]:text-muted [&_td]:py-3 [&_td]:pr-4 [&_td]:border-b [&_td]:border-line [&_td]:align-top",
+              // No table rules here on purpose. These were descendant selectors
+              // ([&_th] matches at any depth), so they also styled the innards of
+              // any self-styled component dropped into a legal page — and won,
+              // being one specificity step above the component's own classes.
+              // Nothing writes a bare <table> in a LegalPage any more; the size
+              // guide's chart is a component that styles itself.
             ].join(" ")}
           >
             {children}

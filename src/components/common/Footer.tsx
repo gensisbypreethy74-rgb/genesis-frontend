@@ -50,7 +50,7 @@ export default function Footer() {
       <div className="max-w-[1500px] mx-auto px-6 sm:px-10 lg:px-16 pt-10 sm:pt-14 pb-8">
         {/* Tagline */}
         <Reveal className="text-center max-w-3xl mx-auto">
-          <p className="font-display italic text-[19px] sm:text-[24px] lg:text-[28px] leading-snug text-ink/85">
+          <p className="font-display text-[15px] sm:text-[17px] lg:text-[19px] leading-relaxed text-ink/75">
             Genesis by Preethy — natural clothing for tropical climates and a life that no
             longer needs to perform.
           </p>
@@ -91,10 +91,9 @@ export default function Footer() {
           ))}
         </div>
 
-        {/* Wordmark — ink on the beige ground; the gold mark is for dark only. */}
         <Reveal className="mt-9 flex justify-center">
           <Link href="/" aria-label="Genesis by Preethy — home">
-            <Logo tone="ink" className="h-[40px] sm:h-[52px] opacity-90" />
+            <Logo className="h-[40px] sm:h-[52px]" />
           </Link>
         </Reveal>
 
