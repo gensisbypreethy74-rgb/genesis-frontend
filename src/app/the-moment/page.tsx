@@ -3,7 +3,7 @@ import Reveal from "../../components/ui/Reveal";
 import EditorialImage from "../../components/ui/EditorialImage";
 import { ButtonLink } from "../../components/ui/Button";
 import Breadcrumbs from "../../components/common/Breadcrumbs";
-import OnamCollectionGrid from "../../components/collections/OnamCollectionGrid";
+import MomentCollectionGrid from "../../components/collections/MomentCollectionGrid";
 
 interface Moment {
   label: string;
@@ -119,8 +119,8 @@ export default function TheMomentPage() {
         </div>
       </section>
 
-      {/* The Onam Collection — same seasonal products as /collections/onam */}
-      <OnamCollectionGrid />
+      {/* The Moment's pieces — same set as the homepage carousel */}
+      <MomentCollectionGrid />
 
       {/* Closing links */}
       <section className="bg-ivory">

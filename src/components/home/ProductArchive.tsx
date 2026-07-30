@@ -5,7 +5,7 @@ import axios from "axios";
 import Reveal from "../ui/Reveal";
 import { ButtonLink } from "../ui/Button";
 import ProductCard from "../ui/ProductCard";
-import { type Product } from "../../lib/product";
+import { isMoment, type Product } from "../../lib/product";
 import { fetchMoment, type SeasonalCollection } from "../../lib/moment";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/api\/?$/, "");
@@ -17,7 +17,6 @@ const FALLBACK: SeasonalCollection = {
   description: "",
   ctaLabel: "View All Pieces",
   ctaHref: "/products",
-  productIds: [],
 };
 
 export default function ProductArchive() {
@@ -34,13 +33,13 @@ export default function ProductArchive() {
       .then(([all, moment]) => {
         const s = moment?.seasonal;
         if (s) setSeasonal(s);
-        const ids = s?.productIds ?? [];
-        if (ids.length) {
-          // Assigned + ordered: keep the studio's exact order, drop any deleted ids.
-          const byId = new Map(all.map((p) => [p._id, p]));
-          setProducts(ids.map((id) => byId.get(id)).filter(Boolean) as Product[]);
+        // Membership is the category, set in the Products module. Newest first,
+        // following the products API's own order.
+        const picked = all.filter(isMoment);
+        if (picked.length) {
+          setProducts(picked);
         } else {
-          // Nothing assigned yet: fall back to landing-page pieces.
+          // Nothing filed under The Moment yet: fall back to landing-page pieces.
           const landing = all.filter((p) => p.showOnLandingPage);
           setProducts((landing.length ? landing : all).slice(0, 10));
         }

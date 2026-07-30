@@ -9,7 +9,7 @@ import Reveal from "../ui/Reveal";
 import { Button } from "../ui/Button";
 import Breadcrumbs from "../common/Breadcrumbs";
 import { type Product, fromPrice } from "../../lib/product";
-import { slugify, FIXED_EDIT_CATEGORIES } from "../../lib/categories";
+import { slugify, FIXED_CATEGORIES } from "../../lib/categories";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -185,9 +185,9 @@ function BrowserContent({ scope, heading }: ProductBrowserProps) {
 
         if (prodJson?.success && Array.isArray(prodJson.data)) {
           const activeCatNames = activeBackendCats.map((c: any) => c.name.toLowerCase());
-          // The four fixed THE EDIT categories aren't Category docs, so allow
-          // them through the active-category visibility gate too.
-          const allowed = [...activeCatNames, ...FIXED_EDIT_CATEGORIES];
+          // Fixed categories (the Edit sections, The Moment) aren't Category
+          // docs, so allow them through the active-category visibility gate too.
+          const allowed = [...activeCatNames, ...FIXED_CATEGORIES];
           const visibleProducts =
             activeCatNames.length > 0
               ? prodJson.data.filter((p: any) =>

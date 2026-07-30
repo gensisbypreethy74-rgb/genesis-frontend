@@ -1,4 +1,5 @@
 import axios from "axios";
+import { MOMENT_CATEGORY } from "./product";
 
 /**
  * Categories, as the storefront consumes them.
@@ -31,11 +32,21 @@ const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").
  * rather than a copy per page.
  */
 /**
- * The four fixed THE EDIT categories (lowercased). They aren't Category-model
- * docs, so any code that gates products to *active* categories must let these
- * through too — otherwise a piece filed under one becomes unreachable.
+ * Every category the studio can file a piece under that is NOT a Category-model
+ * doc (lowercased): the four fixed THE EDIT sections, plus The Moment.
+ *
+ * Any code that gates products to *active* categories must let these through, or
+ * a piece filed under one becomes unreachable — which is exactly how pieces filed
+ * under The Moment started 404ing on their detail page. Add to this list whenever
+ * a new fixed option joins the admin's Category dropdown.
  */
-export const FIXED_EDIT_CATEGORIES = ["within", "beyond", "genesis men", "archive"];
+export const FIXED_CATEGORIES = [
+  "within",
+  "beyond",
+  "genesis men",
+  "archive",
+  MOMENT_CATEGORY.toLowerCase(),
+];
 
 export const slugify = (s?: string) =>
   (s || "")

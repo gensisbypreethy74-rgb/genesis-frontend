@@ -4,13 +4,16 @@ export interface MomentStep {
   description: string;
 }
 
+/**
+ * Header copy for The Moment's product showcase. Membership isn't listed here —
+ * a piece is in The Moment when its `category` is "The Moment".
+ */
 export interface SeasonalCollection {
   eyebrow: string;
   heading: string;
   description: string;
   ctaLabel: string;
   ctaHref: string;
-  productIds: string[];
 }
 
 export interface Moment {

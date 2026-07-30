@@ -48,6 +48,19 @@ export interface Product {
 }
 
 /**
+ * The fixed category that files a piece into The Moment. Mirrors
+ * `MOMENT_CATEGORY` in the admin's products/_components/types.ts — the studio
+ * picks it from the Category dropdown, and this string is the contract between
+ * that dropdown and every Moment surface here.
+ */
+export const MOMENT_CATEGORY = "The Moment";
+
+/** A piece the studio filed under The Moment. */
+export function isMoment(p: Product): boolean {
+  return p.category === MOMENT_CATEGORY;
+}
+
+/**
  * One product by id, fetched server-side. Returns null on a 404, a bad id, or
  * an unreachable backend — every caller renders a fallback rather than an
  * error page, because a missing size chart should never take a page down.

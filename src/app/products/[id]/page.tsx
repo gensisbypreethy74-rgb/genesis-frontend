@@ -8,7 +8,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Check, MessageCircle } from "lucide-react";
 import { useCart } from "../../../context/CartContext";
 import { formatINR, type SizeChartRow } from "../../../lib/product";
-import { FIXED_EDIT_CATEGORIES } from "../../../lib/categories";
+import { FIXED_CATEGORIES } from "../../../lib/categories";
 import { Button } from "../../../components/ui/Button";
 import Reveal from "../../../components/ui/Reveal";
 import Gallery from "./_components/Gallery";
@@ -163,9 +163,10 @@ export default function ProductDetailPage() {
           // link must still resolve rather than 404 — never leave a real product
           // unreachable because a *separate* request hiccupped.
           const all = prodJson.data as ApiProduct[];
-          // Fixed THE EDIT categories aren't Category docs — let them through
-          // the active-category gate so a "Within" piece stays reachable.
-          const allowed = [...activeCatNames, ...FIXED_EDIT_CATEGORIES];
+          // Fixed categories (the Edit sections, The Moment) aren't Category
+          // docs — let them through the active-category gate so a piece filed
+          // under one stays reachable.
+          const allowed = [...activeCatNames, ...FIXED_CATEGORIES];
           const activeProducts =
             activeCatNames.length > 0
               ? all.filter((p) => allowed.includes((p.category || "").toLowerCase()))
