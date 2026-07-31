@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter, Cormorant_Garamond, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "../components/common/Navbar";
-import FloatingActions from "../components/common/FloatingActions";
 import Footer from "../components/common/Footer";
 
 const inter = Inter({
@@ -50,7 +49,6 @@ export default function RootLayout({
               <Navbar />
               {children}
               <Footer />
-              <FloatingActions />
             </GoogleOAuthWrapper>
           </CartProvider>
         </ToastProvider>

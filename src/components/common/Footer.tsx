@@ -1,14 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import axios from "axios";
 import Reveal from "../ui/Reveal";
 import Logo from "../ui/Logo";
-import { useToast } from "../../context/ToastContext";
-import { CARE_EMAIL, COMPANY, WHATSAPP_URL } from "../../lib/contact";
-
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/api\/?$/, "");
+import { COMPANY, WHATSAPP_URL } from "../../lib/contact";
 
 const COLUMNS: { title: string; links: { label: string; href: string; external?: boolean }[] }[] = [
   {
@@ -28,7 +23,6 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
       { label: "Returns & Exchanges", href: "/returns-exchanges" },
       { label: "Size Guide", href: "/size-guide" },
       { label: "Contact / WhatsApp", href: WHATSAPP_URL, external: true },
-      { label: CARE_EMAIL, href: `mailto:${CARE_EMAIL}`, external: true },
     ],
   },
   {
@@ -100,13 +94,10 @@ export default function Footer() {
           ))}
         </div>
 
-        {/* Newsletter — Module 5 §3 locates opt-in at the "footer Newsletter
-            Studio signup", so the form belongs here and not only on the home
-            page. Same endpoint as the home section, tagged with its own source
-            so the studio can tell the two apart. */}
-        <FooterNewsletter />
+        {/* Newsletter opt-in lives only in the home StudioNewsletter section —
+            one form site-wide. */}
 
-        <Reveal className="mt-9 flex justify-center">
+        <Reveal className="mt-9 pt-9 border-t border-ink/12 flex justify-center">
           <Link href="/" aria-label="Genesis by Preethy — home">
             <Logo className="h-[40px] sm:h-[52px]" />
           </Link>
@@ -115,7 +106,7 @@ export default function Footer() {
         {/* Statutory identity — Module 4 §1 (legal name, registered office, CIN)
             and §12 (jurisdiction). Required on display by the Consumer
             Protection (E-Commerce) Rules, 2020. */}
-        <div className="mt-8 pt-5 border-t border-ink/12 space-y-2 text-center">
+        <div className="mt-8 space-y-2 text-center">
           <p className="font-sans text-[11px] leading-relaxed tracking-wide text-faint">
             {COMPANY.legalName} · CIN {COMPANY.cin}
           </p>
@@ -138,80 +129,5 @@ export default function Footer() {
         </div>
       </div>
     </footer>
-  );
-}
-
-/**
- * Compact newsletter opt-in. Mirrors the home section's validation and endpoint;
- * `source` distinguishes footer signups in the studio's list. The opt-in wording
- * is explicit because Module 5 §3 treats this as the consent moment for
- * marketing email.
- */
-function FooterNewsletter() {
-  const [email, setEmail] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const { showToast } = useToast();
-
-  const subscribe = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const value = email.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      showToast("Please enter a valid email address.", "warning");
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const res = await axios.post(`${API_BASE}/api/v1/newsletter/subscribe`, {
-        email: value,
-        source: "footer-studio",
-      });
-      if (res.data?.success) {
-        showToast("Subscribed. Slow letters, on their way.", "success");
-        setEmail("");
-      } else {
-        showToast(res.data?.message || "Could not subscribe. Try again.", "error");
-      }
-    } catch (err: unknown) {
-      const msg =
-        axios.isAxiosError(err) && err.response?.data?.message
-          ? (err.response.data.message as string)
-          : "Could not subscribe. Try again.";
-      showToast(msg, "error");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Reveal className="mt-9 pt-9 border-t border-ink/12">
-      <div className="max-w-xl mx-auto text-center">
-        <h3 className="eyebrow text-bronze-deep mb-3">Notes from the Studio</h3>
-        <p className="font-sans text-[13px] leading-[1.75] text-muted mb-5">
-          Occasional letters on new pieces and the thinking behind them. Opt out at any
-          time via the unsubscribe link in any letter.
-        </p>
-        <form onSubmit={subscribe} className="flex flex-col sm:flex-row gap-3 justify-center">
-          <label htmlFor="footer-newsletter-email" className="sr-only">
-            Email address
-          </label>
-          <input
-            id="footer-newsletter-email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="flex-1 min-w-0 bg-cream border border-ink/20 rounded-none px-4 py-3 font-sans text-[13px] text-ink placeholder:text-faint focus:outline-none focus:border-ink"
-          />
-          <button
-            type="submit"
-            disabled={submitting}
-            className="shrink-0 bg-ink text-cream eyebrow px-7 py-3 hover:bg-[#33302a] transition-colors disabled:opacity-50"
-          >
-            {submitting ? "Joining…" : "Join"}
-          </button>
-        </form>
-      </div>
-    </Reveal>
   );
 }
