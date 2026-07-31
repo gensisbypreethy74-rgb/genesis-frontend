@@ -84,7 +84,9 @@ export default function Navbar() {
   useEffect(() => {
     setIsLoggedIn(!!localStorage.getItem("heedy_user"));
     setMobileOpen(false);
-    setSearchOpen(false);
+    // Typing from any other page lands on /products mid-word — closing the
+    // drawer there would eat the query. Only close when leaving the results.
+    if (pathname !== "/products") setSearchOpen(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -112,10 +114,20 @@ export default function Navbar() {
     router.push("/sign-in");
   };
 
+  // Live search. The shop filters off ?search, so writing it on every keystroke
+  // filters as you type — no Enter. Once we're on /products the URL is updated
+  // shallowly (Next syncs replaceState with useSearchParams): no route fetch and
+  // no history entry per character. Enter then only dismisses the drawer.
+  const runSearch = (value: string) => {
+    setQuery(value);
+    const q = value.trim();
+    const url = q ? `/products?search=${encodeURIComponent(q)}` : "/products";
+    if (pathname === "/products") window.history.replaceState(null, "", url);
+    else router.push(url);
+  };
+
   const submitSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    const q = query.trim();
-    router.push(q ? `/products?search=${encodeURIComponent(q)}` : "/products");
     setSearchOpen(false);
     setMobileOpen(false);
   };
@@ -303,7 +315,7 @@ export default function Navbar() {
                     autoFocus
                     type="search"
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={(e) => runSearch(e.target.value)}
                     placeholder="Search pieces, collections…"
                     aria-label="Search"
                     className="w-full bg-transparent font-display text-2xl sm:text-3xl text-ink placeholder:text-faint focus:outline-none"

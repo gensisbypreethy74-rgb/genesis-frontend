@@ -109,18 +109,20 @@ export default function StoryClient({ payload }: { payload: StoryPayload | null 
         </div>
       </div>
 
-      {hasLive ? (
-        // Admin-managed content — the full page is theirs to compose.
-        sections.map((s) => <StorySectionView key={s._id} section={s} />)
-      ) : (
-        // Default editorial content until the studio publishes its own.
-        <>
-          <FoundersNote />
-          {FALLBACK_SECTIONS.map((s) => (
-            <StorySectionView key={s._id} section={s} />
-          ))}
-        </>
-      )}
+      {/* Fixed on this page, outside the live/fallback branch below. It reads the
+          same `/founder-note` singleton the Home page shows, so editing it under
+          Founder's Note in the admin updates both.
+
+          It used to sit inside the fallback arm only, which meant publishing a
+          single Story section flipped `hasLive` and took the Founder's Note down
+          with the rest of that branch. */}
+      <FoundersNote />
+
+      {hasLive
+        ? // Admin-managed content — the sections below are theirs to compose.
+          sections.map((s) => <StorySectionView key={s._id} section={s} />)
+        : // Default editorial content until the studio publishes its own.
+          FALLBACK_SECTIONS.map((s) => <StorySectionView key={s._id} section={s} />)}
     </main>
   );
 }

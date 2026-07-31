@@ -16,15 +16,9 @@ import SizeSelector from "./_components/SizeSelector";
 import Accordion from "./_components/Accordion";
 import SizeChart from "../../../components/ui/SizeChart";
 import { CARE_ICON_MAP, isCareIcon, type CareIcon } from "./_components/careIcons";
+import { WHATSAPP_URL } from "../../../lib/contact";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-/**
- * The studio's WhatsApp line. Mirrors `WHATSAPP_NUMBER` in
- * src/components/common/Footer.tsx — that file declares it privately, so the
- * value is repeated here rather than invented. Change both together.
- */
-const WHATSAPP_NUMBER = "916235251520";
 
 /** Provenance + dispatch line shown under the CTA on every piece. */
 const MADE_IN_NOTE = "Made in India — Kochi, Kerala. Ships in 5–9 days.";
@@ -415,7 +409,7 @@ export default function ProductDetailPage() {
                 {MADE_IN_NOTE}
               </p>
               <a
-                href={`https://wa.me/${WHATSAPP_NUMBER}`}
+                href={WHATSAPP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-start gap-2.5 font-sans text-[13px] leading-relaxed text-muted transition-colors duration-300 hover:text-ink"

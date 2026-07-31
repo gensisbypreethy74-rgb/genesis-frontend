@@ -93,11 +93,11 @@ export default function ProductArchive() {
 
         {/* Carousel */}
         {loading ? (
-          <div className="flex gap-6 overflow-hidden">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-12 sm:flex sm:gap-6 sm:overflow-hidden">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="w-[260px] sm:w-[300px] shrink-0">
+              <div key={i} className="sm:w-[300px] sm:shrink-0">
                 <div className="aspect-[3/4] img-placeholder animate-pulse" />
-                <div className="h-4 bg-sand mt-4 w-2/3 mx-auto animate-pulse" />
+                <div className="h-4 bg-sand mt-4 w-2/3 animate-pulse" />
               </div>
             ))}
           </div>
@@ -108,10 +108,10 @@ export default function ProductArchive() {
         ) : (
           <div
             ref={scroller}
-            className="flex gap-6 lg:gap-8 overflow-x-auto hide-scrollbar snap-x snap-mandatory -mx-6 px-6 sm:mx-0 sm:px-0"
+            className="grid grid-cols-2 gap-x-6 gap-y-12 sm:flex sm:gap-6 lg:gap-8 sm:overflow-x-auto hide-scrollbar sm:snap-x sm:snap-mandatory"
           >
             {products.map((p) => (
-              <div key={p._id} className="w-[260px] sm:w-[300px] lg:w-[320px] shrink-0 snap-start">
+              <div key={p._id} className="sm:w-[300px] lg:w-[320px] sm:shrink-0 sm:snap-start">
                 <ProductCard product={p} />
               </div>
             ))}

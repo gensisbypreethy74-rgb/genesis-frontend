@@ -4,8 +4,7 @@ import { useState } from "react";
 import LegalPage from "../../components/common/LegalPage";
 import { Button, ButtonLink } from "../../components/ui/Button";
 import { useToast } from "../../context/ToastContext";
-
-const WHATSAPP_NUMBER = "916235251520";
+import { WHATSAPP_URL } from "../../lib/contact";
 
 export default function TrackOrderPage() {
   const [orderId, setOrderId] = useState("");
@@ -79,7 +78,7 @@ export default function TrackOrderPage() {
       </p>
       <div className="not-prose mt-6">
         <ButtonLink
-          href={`https://wa.me/${WHATSAPP_NUMBER}`}
+          href={WHATSAPP_URL}
           target="_blank"
           rel="noopener noreferrer"
           variant="solid"

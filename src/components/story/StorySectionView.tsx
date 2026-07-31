@@ -18,6 +18,17 @@ function CtaLink({ href, children }: { href: string; children: React.ReactNode }
   );
 }
 
+/**
+ * Alt text for a section's image. The admin no longer exposes an alt field, so
+ * this falls back to the section's own headline or label — an editorial image
+ * described by its headline reads far better to a screen reader than the `alt=""`
+ * an empty field would otherwise leave behind. Sections saved with real alt text
+ * still win.
+ */
+function sectionImageAlt(s: StorySection): string {
+  return s.imageAlt || s.title || s.eyebrow || "";
+}
+
 /** Renders a single Story section by its type, in the storefront's editorial language. */
 export default function StorySectionView({ section: s }: { section: StorySection }) {
   const reduce = useReducedMotion();
@@ -144,7 +155,7 @@ export default function StorySectionView({ section: s }: { section: StorySection
                 transition={{ duration: 0.7, ease, delay: (i % 3) * 0.08 }}
                 className="group"
               >
-                <EditorialImage src={img} placeholderLabel={s.title || "Gallery"} alt={s.imageAlt || ""} ratio="aspect-[4/5]" />
+                <EditorialImage src={img} placeholderLabel={s.title || "Gallery"} alt={sectionImageAlt(s)} ratio="aspect-[4/5]" />
               </motion.div>
             ))}
           </div>
@@ -159,7 +170,7 @@ export default function StorySectionView({ section: s }: { section: StorySection
       <section className="bg-ivory">
         <div className="max-w-[1500px] mx-auto px-6 sm:px-10 lg:px-16 py-10 sm:py-14 lg:py-16">
           <motion.div {...rise} viewport={viewport} transition={{ duration: 0.9, ease }} className="group">
-            <EditorialImage src={s.image} placeholderLabel={s.title || "Genesis"} alt={s.imageAlt || ""} ratio="aspect-[16/9]" />
+            <EditorialImage src={s.image} placeholderLabel={s.title || "Genesis"} alt={sectionImageAlt(s)} ratio="aspect-[16/9]" />
           </motion.div>
           {(s.title || body.length > 0) && (
             <div className="mt-6 max-w-2xl">
@@ -216,7 +227,7 @@ export default function StorySectionView({ section: s }: { section: StorySection
             <EditorialImage
               src={s.image}
               placeholderLabel={s.eyebrow || s.title || "Genesis"}
-              alt={s.imageAlt || ""}
+              alt={sectionImageAlt(s)}
               // Square rather than 4:5 portrait. At half of a 1500px page these
               // frames ran ~800px tall, so the text sat centred against a lot of
               // empty column; this takes ~20% off the height.

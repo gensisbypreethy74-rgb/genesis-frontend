@@ -58,7 +58,8 @@ export default function PrivacyPolicyPage() {
         cannot be guaranteed.
       </p>
 
-      <h2>5. Cookies</h2>
+      {/* The footer's "Cookie Preferences" link targets this id. */}
+      <h2 id="cookies">5. Cookies</h2>
       <p>
         Our website may use cookies to improve your browsing experience and analyze
         website traffic. You may disable cookies through your browser settings if

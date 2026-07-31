@@ -143,16 +143,6 @@ export function garmentLabel(p: Product): string {
   return p.garmentType || p.category || "";
 }
 
-// Short display labels for the life-mode tag shown on a product card.
-const MODE_TAG_LABEL: Record<string, string> = {
-  "at-home identity": "AT-HOME",
-  "at-home-identity": "AT-HOME",
-  "casual/out": "CASUAL/OUT",
-  "casual-out": "CASUAL/OUT",
-  ambition: "AMBITION",
-  occasion: "OCCASION",
-};
-
 export interface ProductTag {
   label: string;
   /** Limited tags render in the warm-brown "LIMITED PIECE" style. */
@@ -160,18 +150,16 @@ export interface ProductTag {
 }
 
 /**
- * Card tags, in order: the life-mode label (AT-HOME / AMBITION / …) then, when
- * the piece is flagged, a "LIMITED PIECE" tag. Falls back to `offerText` as a
- * tag when there's no life mode, so older pieces still show their badge.
+ * Card tags: the piece's `offerText`, then a "LIMITED PIECE" tag when flagged.
+ *
+ * Life mode is deliberately NOT a card tag. It is a detail-page attribute only —
+ * the listing must carry no visible indication of it — so the AT-HOME /
+ * AMBITION / OCCASION / CASUAL-OUT badge this used to emit (and the label map
+ * behind it) is gone. The detail page renders its own "Life Mode · …" pill.
  */
 export function productTags(p: Product): ProductTag[] {
   const tags: ProductTag[] = [];
-  if (p.lifeMode) {
-    const key = p.lifeMode.trim().toLowerCase();
-    tags.push({ label: MODE_TAG_LABEL[key] || p.lifeMode.toUpperCase() });
-  } else if (p.offerText) {
-    tags.push({ label: p.offerText });
-  }
+  if (p.offerText) tags.push({ label: p.offerText });
   if (p.limited) tags.push({ label: "LIMITED PIECE", limited: true });
   return tags;
 }
