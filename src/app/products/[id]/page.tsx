@@ -410,15 +410,12 @@ export default function ProductDetailPage() {
                 {MADE_IN_NOTE}
               </p>
               {(() => {
-                // Build the product page URL — works both in development and production.
                 const productUrl =
                   typeof window !== "undefined"
                     ? `${window.location.origin}/products/${product.id}`
-                    : `/products/${product.id}`;
-                const message =
-                  `Hi, I'm looking at *${product.name}*\n\n` +
-                  `${productUrl}\n\n` +
-                  `I'm interested in this product and I have a few questions. Can you help?`;
+                    : `https://genesisbypreethy.com/products/${product.id}`;
+                
+                const message = `*${product.name}*\n${productUrl}\n\nI'm interested in this product and I have a few questions. Can you help?`;
                 const waUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
                 return (
                   <a
