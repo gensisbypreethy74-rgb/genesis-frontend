@@ -26,20 +26,32 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       }
     }
     
+    // Ensure the image URL is absolute for WhatsApp and other crawlers.
+    // Relative URLs will be ignored by social platforms.
+    let absoluteImageUrl = image;
+    if (image && image.startsWith('/')) {
+      if (image.startsWith('/uploads/')) {
+        absoluteImageUrl = `${baseUrl}${image}`;
+      } else {
+        // Fallback for static assets in the public directory
+        absoluteImageUrl = `https://genesisbypreethy.com${image}`;
+      }
+    }
+    
     return {
       title: `${product.name || 'Product'} | Genesis by Preethy`,
       description: product.tagline || product.name || 'View this product at Genesis by Preethy.',
       openGraph: {
         title: product.name,
         description: product.tagline || product.name,
-        images: image ? [image] : [],
+        images: absoluteImageUrl ? [absoluteImageUrl] : [],
         type: 'website',
       },
       twitter: {
         card: 'summary_large_image',
         title: product.name,
         description: product.tagline || product.name,
-        images: image ? [image] : [],
+        images: absoluteImageUrl ? [absoluteImageUrl] : [],
       },
     };
   } catch (error) {
