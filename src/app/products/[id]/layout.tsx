@@ -17,18 +17,39 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     
     if (!product) return {};
     
+    // Safely extract the primary image
+    let image = product.images?.[0];
+    if (!image && Array.isArray(product.variants)) {
+      const variantWithImage = product.variants.find((v: any) => Array.isArray(v.images) && v.images.length > 0);
+      if (variantWithImage) {
+        image = variantWithImage.images[0];
+      }
+    }
+    
+    // Ensure the image URL is absolute for WhatsApp and other crawlers.
+    let absoluteImageUrl = image;
+    if (image && image.startsWith('/')) {
+      if (image.startsWith('/uploads/')) {
+        absoluteImageUrl = `${baseUrl}${image}`;
+      } else {
+        absoluteImageUrl = `https://genesisbypreethy.com${image}`;
+      }
+    }
+    
     return {
       title: `${product.name || 'Product'} | Genesis by Preethy`,
       description: product.tagline || product.name || 'View this product at Genesis by Preethy.',
       openGraph: {
         title: product.name,
         description: product.tagline || product.name,
+        images: absoluteImageUrl ? [absoluteImageUrl] : undefined,
         type: 'website',
       },
       twitter: {
         card: 'summary_large_image',
         title: product.name,
         description: product.tagline || product.name,
+        images: absoluteImageUrl ? [absoluteImageUrl] : undefined,
       },
     };
   } catch (error) {
