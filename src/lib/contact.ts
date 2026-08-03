@@ -8,14 +8,6 @@
  * different number depending on which page they asked from. One export, no drift.
  */
 
-/** Digits only, country code first — the form wa.me expects. */
-export const WHATSAPP_NUMBER = "917736605422";
-
-/** Human-readable, for anywhere the number is shown rather than linked. */
-export const WHATSAPP_DISPLAY = "+91 77366 05422";
-
-/** Canonical chat link. */
-export const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}`;
 
 /**
  * Statutory company identity, from the Website Specification (Vol. One,

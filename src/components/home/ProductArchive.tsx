@@ -16,7 +16,7 @@ const FALLBACK: SeasonalCollection = {
   heading: "Named for the flowers of the season.",
   description: "",
   ctaLabel: "View All Pieces",
-  ctaHref: "/products",
+  ctaHref: "/products?category=the-moment",
 };
 
 export default function ProductArchive() {
@@ -32,7 +32,19 @@ export default function ProductArchive() {
     ])
       .then(([all, moment]) => {
         const s = moment?.seasonal;
-        if (s) setSeasonal(s);
+        if (s) {
+          // The Moment membership is by `category`, not `collectionName`, so any
+          // href that filters on collection or shows the unfiltered shop must be
+          // rewritten to the category filter.
+          if (
+            s.ctaHref === "/products" ||
+            s.ctaHref.startsWith("/products?collection=") ||
+            s.ctaHref.startsWith("/collections/")
+          ) {
+            s.ctaHref = "/products?category=the-moment";
+          }
+          setSeasonal(s);
+        }
         // Membership is the category, set in the Products module. Newest first,
         // following the products API's own order.
         const picked = all.filter(isMoment);

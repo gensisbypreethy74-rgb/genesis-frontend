@@ -3,51 +3,54 @@
 import Link from "next/link";
 import Reveal from "../ui/Reveal";
 import Logo from "../ui/Logo";
-import { COMPANY, WHATSAPP_URL } from "../../lib/contact";
-
-const COLUMNS: { title: string; links: { label: string; href: string; external?: boolean }[] }[] = [
-  {
-    title: "The Wardrobe Edit",
-    links: [
-      { label: "Within", href: "/the-edit/within" },
-      { label: "Beyond", href: "/the-edit/beyond" },
-      { label: "Genesis Men", href: "/the-edit/genesis-man" },
-      { label: "Archive", href: "/the-edit/archive" },
-    ],
-  },
-  {
-    title: "Customer Care",
-    links: [
-      { label: "Track Your Order", href: "/track-order" },
-      { label: "Shipping Information", href: "/shipping-information" },
-      { label: "Returns & Exchanges", href: "/returns-exchanges" },
-      { label: "Size Guide", href: "/size-guide" },
-      { label: "Contact / WhatsApp", href: WHATSAPP_URL, external: true },
-    ],
-  },
-  {
-    title: "Legal",
-    links: [
-      { label: "Terms & Conditions", href: "/terms-and-conditions" },
-      { label: "Privacy Policy", href: "/privacy-policy" },
-      { label: "Refund & Cancellation", href: "/refund-cancellation" },
-      { label: "Shipping Policy", href: "/shipping-policy" },
-      // Module 5 §8 requires this link in the footer. It points at the Privacy
-      // Policy's cookie clause, which is the only place preferences are
-      // documented — the consent banner the spec describes does not exist yet.
-      { label: "Cookie Preferences", href: "/privacy-policy#cookies" },
-    ],
-  },
-  {
-    title: "Socials",
-    links: [
-      { label: "Instagram", href: "https://www.instagram.com/genesis.bypreethy/", external: true },
-      { label: "Pinterest", href: "https://pinterest.com", external: true },
-    ],
-  },
-];
+import { COMPANY } from "../../lib/contact";
+import { useSettings } from "../../context/SettingsContext";
 
 export default function Footer() {
+  const { whatsappNumber } = useSettings();
+
+  const COLUMNS = [
+    {
+      title: "The Wardrobe Edit",
+      links: [
+        { label: "Within", href: "/the-edit/within" },
+        { label: "Beyond", href: "/the-edit/beyond" },
+        { label: "Genesis Men", href: "/the-edit/genesis-man" },
+        { label: "Archive", href: "/the-edit/archive" },
+      ],
+    },
+    {
+      title: "Customer Care",
+      links: [
+        { label: "Track Your Order", href: "/track-order" },
+        { label: "Shipping Information", href: "/shipping-information" },
+        { label: "Returns & Exchanges", href: "/returns-exchanges" },
+        { label: "Size Guide", href: "/size-guide" },
+        { label: "Contact / WhatsApp", href: `https://wa.me/${whatsappNumber}`, external: true },
+      ],
+    },
+    {
+      title: "Legal",
+      links: [
+        { label: "Terms & Conditions", href: "/terms-and-conditions" },
+        { label: "Privacy Policy", href: "/privacy-policy" },
+        { label: "Refund & Cancellation", href: "/refund-cancellation" },
+        { label: "Shipping Policy", href: "/shipping-policy" },
+        // Module 5 §8 requires this link in the footer. It points at the Privacy
+        // Policy's cookie clause, which is the only place preferences are
+        // documented — the consent banner the spec describes does not exist yet.
+        { label: "Cookie Preferences", href: "/privacy-policy#cookies" },
+      ],
+    },
+    {
+      title: "Socials",
+      links: [
+        { label: "Instagram", href: "https://www.instagram.com/genesis.bypreethy/", external: true },
+        { label: "Pinterest", href: "https://pinterest.com", external: true },
+      ],
+    },
+  ];
+
   return (
     <footer className="bg-beige text-ink w-full">
       <div className="max-w-[1500px] mx-auto px-6 sm:px-10 lg:px-16 pt-10 sm:pt-14 pb-8">

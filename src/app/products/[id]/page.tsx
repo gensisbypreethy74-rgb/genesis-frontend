@@ -16,7 +16,7 @@ import SizeSelector from "./_components/SizeSelector";
 import Accordion from "./_components/Accordion";
 import SizeChart from "../../../components/ui/SizeChart";
 import { CARE_ICON_MAP, isCareIcon, type CareIcon } from "./_components/careIcons";
-import { WHATSAPP_URL } from "../../../lib/contact";
+import { useSettings } from "../../../context/SettingsContext";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -127,6 +127,7 @@ export default function ProductDetailPage() {
   const [selectedSize, setSelectedSize] = useState<number | null>(null);
   const [added, setAdded] = useState(false);
   const { addToCart } = useCart();
+  const { whatsappNumber } = useSettings();
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -408,20 +409,34 @@ export default function ProductDetailPage() {
                 />
                 {MADE_IN_NOTE}
               </p>
-              <a
-                href={WHATSAPP_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-start gap-2.5 font-sans text-[13px] leading-relaxed text-muted transition-colors duration-300 hover:text-ink"
-              >
-                <MessageCircle
-                  size={14}
-                  strokeWidth={1.5}
-                  aria-hidden
-                  className="mt-[3px] shrink-0"
-                />
-                <span className="link-underline">Questions about fit? Message us on WhatsApp.</span>
-              </a>
+              {(() => {
+                // Build the product page URL — works both in development and production.
+                const productUrl =
+                  typeof window !== "undefined"
+                    ? `${window.location.origin}/products/${product.id}`
+                    : `/products/${product.id}`;
+                const message =
+                  `Hi, I'm looking at *${product.name}*\n\n` +
+                  `${productUrl}\n\n` +
+                  `I'm interested in this product and I have a few questions. Can you help?`;
+                const waUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+                return (
+                  <a
+                    href={waUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-start gap-2.5 font-sans text-[13px] leading-relaxed text-muted transition-colors duration-300 hover:text-ink"
+                  >
+                    <MessageCircle
+                      size={14}
+                      strokeWidth={1.5}
+                      aria-hidden
+                      className="mt-[3px] shrink-0"
+                    />
+                    <span className="link-underline">Questions about fit? Message us on WhatsApp.</span>
+                  </a>
+                );
+              })()}
             </div>
 
             {/* Divider — the accordions below always render, so this never dangles */}

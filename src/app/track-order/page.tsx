@@ -4,12 +4,13 @@ import { useState } from "react";
 import LegalPage from "../../components/common/LegalPage";
 import { Button, ButtonLink } from "../../components/ui/Button";
 import { useToast } from "../../context/ToastContext";
-import { WHATSAPP_URL } from "../../lib/contact";
+import { useSettings } from "../../context/SettingsContext";
 
 export default function TrackOrderPage() {
   const [orderId, setOrderId] = useState("");
   const [email, setEmail] = useState("");
   const { showToast } = useToast();
+  const { whatsappNumber } = useSettings();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +79,7 @@ export default function TrackOrderPage() {
       </p>
       <div className="not-prose mt-6">
         <ButtonLink
-          href={WHATSAPP_URL}
+          href={`https://wa.me/${whatsappNumber}`}
           target="_blank"
           rel="noopener noreferrer"
           variant="solid"

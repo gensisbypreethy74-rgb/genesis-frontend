@@ -29,7 +29,14 @@ export default function TheMoment({ moment }: { moment?: Moment | null }) {
     "A small, named run — pieces drawn for Onam, live now. It closes on its own time, not when stock runs low.\n\nNothing here is discounted, and nothing is rushed. When this window closes, the pieces move — unchanged — into the Archive, and rest there, fully available to buy."
   ).split(/\n{2,}/);
   const shopLabel = moment?.shopLabel ?? "Shop the Onam Collection";
-  const shopHref = moment?.shopHref ?? "/products?collection=onam";
+  // Normalise legacy hrefs that filtered on collection instead of category.
+  const rawShopHref = moment?.shopHref ?? "/products?category=the-moment";
+  const shopHref =
+    rawShopHref === "/products" ||
+    rawShopHref.startsWith("/products?collection=") ||
+    rawShopHref.startsWith("/collections/")
+      ? "/products?category=the-moment"
+      : rawShopHref;
 
   // Staggered fade + upward translate; opacity-only when reduced motion is on.
   const container = {

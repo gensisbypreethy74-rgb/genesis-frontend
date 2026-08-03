@@ -38,7 +38,15 @@ export default function MomentCollectionGrid() {
         setEyebrow(s?.eyebrow || "Now · The Moment");
         setHeading(s?.heading || "The pieces of this Moment.");
         setCtaLabel(s?.ctaLabel || "View All Pieces");
-        setCtaHref(s?.ctaHref || "/products");
+        // The Moment membership is by `category`, not `collectionName`, so any
+        // href that filters on collection or shows the unfiltered shop must be
+        // rewritten to the category filter.
+        const href = s?.ctaHref || "/products?category=the-moment";
+        const needsFix =
+          href === "/products" ||
+          href.startsWith("/products?collection=") ||
+          href.startsWith("/collections/");
+        setCtaHref(needsFix ? "/products?category=the-moment" : href);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
