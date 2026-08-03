@@ -42,6 +42,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       openGraph: {
         title: product.name,
         description: product.tagline || product.name,
+        url: `https://genesisbypreethy.com/products/${id}`,
         images: absoluteImageUrl ? [absoluteImageUrl] : undefined,
         type: 'website',
       },
