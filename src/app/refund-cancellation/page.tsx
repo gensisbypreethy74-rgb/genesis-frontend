@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import LegalPage from "../../components/common/LegalPage";
 
 export const metadata: Metadata = {
-  title: "Refund & Cancellation Policy — Genesis by Preethy",
   description:
     "How Genesis by Preethy handles order cancellations and refunds, including timelines and methods.",
 };

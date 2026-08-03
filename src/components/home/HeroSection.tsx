@@ -78,7 +78,7 @@ export default function HeroSection() {
   return (
     <section
       ref={ref}
-      className="relative h-[92svh] min-h-[560px] sm:h-[100svh] sm:min-h-[600px] w-full overflow-hidden bg-sand"
+      className="relative h-[70svh] min-h-[450px] sm:h-[100svh] sm:min-h-[600px] w-full overflow-hidden bg-sand"
     >
       {/* Background carousel (parallax) — stacked layers crossfade on advance. */}
       <motion.div style={{ y }} className="absolute inset-0 z-0">

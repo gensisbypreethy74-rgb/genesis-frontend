@@ -24,7 +24,9 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://genesisbypreethy.com'),
-  title: "Genesis by Preethy — Tropical-Intelligent Clothing",
+  title: {
+    absolute: "Genesis by Preethy – Tropical-Intelligent Clothing",
+  },
   description:
     "Natural clothing for tropical climates, designed in Kochi for heat, humidity and rain. Considered production, not mass volume.",
   openGraph: {

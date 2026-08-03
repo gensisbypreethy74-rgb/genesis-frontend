@@ -37,7 +37,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     }
     
     return {
-      title: `${product.name || 'Product'} | Genesis by Preethy`,
       description: product.tagline || product.name || 'View this product at Genesis by Preethy.',
       openGraph: {
         title: product.name,

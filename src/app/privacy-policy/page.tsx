@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import LegalPage from "../../components/common/LegalPage";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Genesis by Preethy",
   description:
     "Read the Privacy Policy of Genesis by Preethy. Learn how we collect, use, and protect your data.",
 };
