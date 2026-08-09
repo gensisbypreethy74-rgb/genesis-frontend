@@ -20,8 +20,42 @@ export interface SizeChartRow {
   bust?: number;
   waist?: number;
   hip?: number;
+  inseam?: number;
   length?: number;
 }
+
+/** A named size chart, e.g. { title: 'Top & Dresses', rows: [...] }. */
+export interface SizeChartGroup {
+  title: string;
+  rows: SizeChartRow[];
+}
+
+/**
+ * House-wide default size charts (centimetres) — shown on the general Size Guide
+ * when no specific piece is named. Mirrors the admin's DEFAULT_SIZE_CHART_GROUPS.
+ */
+export const DEFAULT_SIZE_CHARTS: SizeChartGroup[] = [
+  {
+    title: "Top & Dresses",
+    rows: [
+      { size: "S", bust: 86, waist: 68, hip: 92, length: 108 },
+      { size: "M", bust: 91, waist: 73, hip: 97, length: 110 },
+      { size: "L", bust: 96, waist: 78, hip: 102, length: 112 },
+      { size: "XL", bust: 102, waist: 84, hip: 108, length: 114 },
+      { size: "XXL", bust: 108, waist: 90, hip: 114, length: 116 },
+    ],
+  },
+  {
+    title: "Bottom",
+    rows: [
+      { size: "S", waist: 68, hip: 92, inseam: 74, length: 96 },
+      { size: "M", waist: 73, hip: 97, inseam: 75, length: 98 },
+      { size: "L", waist: 78, hip: 102, inseam: 76, length: 100 },
+      { size: "XL", waist: 84, hip: 108, inseam: 77, length: 102 },
+      { size: "XXL", waist: 90, hip: 114, inseam: 78, length: 104 },
+    ],
+  },
+];
 
 export interface Product {
   _id: string;
@@ -34,7 +68,8 @@ export interface Product {
   editSection?: string; // "Within" | "Beyond" | "Genesis Men" | "Archive"
   limited?: boolean;    // renders the "LIMITED PIECE" tag
   materials?: string[]; // fabrics, e.g. ["Cotton", "Linen"] — drives the shop's Material filter
-  sizeChart?: SizeChartRow[]; // per-piece body measurements, in cm
+  sizeChart?: SizeChartRow[]; // legacy single chart
+  sizeCharts?: SizeChartGroup[]; // named charts, e.g. "Top & Dresses", "Bottom"
   description?: string;
   keyFeatures?: string;
   variants?: Variant[];

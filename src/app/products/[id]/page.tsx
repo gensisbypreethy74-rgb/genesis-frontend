@@ -7,7 +7,7 @@ import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
 import { Check, MessageCircle } from "lucide-react";
 import { useCart } from "../../../context/CartContext";
-import { formatINR, type SizeChartRow } from "../../../lib/product";
+import { formatINR, type SizeChartRow, type SizeChartGroup } from "../../../lib/product";
 import { FIXED_CATEGORIES } from "../../../lib/categories";
 import { Button } from "../../../components/ui/Button";
 import Reveal from "../../../components/ui/Reveal";
@@ -83,6 +83,7 @@ interface ApiProduct {
   materialText?: string;
   specs?: Partial<Spec>[];
   sizeChart?: Partial<SizeChartRow>[];
+  sizeCharts?: { title?: string; rows?: Partial<SizeChartRow>[] }[];
   fitFooter?: string;
   careIcons?: string[];
   careText?: string;
@@ -105,6 +106,7 @@ interface Product {
   materialText: string;
   specs: Spec[];
   sizeChart: SizeChartRow[];
+  sizeCharts: SizeChartGroup[];
   fitFooter: string;
   careIcons: CareIcon[];
   careText: string;
@@ -174,6 +176,24 @@ export default function ProductDetailPage() {
               ...(p.images || []),
               ...(p.variants || []).flatMap((v) => v.images || []),
             ].filter(Boolean);
+            // A row needs a size label; SizeChart drops any empty column.
+            const legacyRows = Array.isArray(p.sizeChart)
+              ? p.sizeChart.filter((r): r is SizeChartRow => Boolean(r?.size))
+              : [];
+            // Named charts win; an older piece's single chart is wrapped as one.
+            const sizeCharts: SizeChartGroup[] =
+              Array.isArray(p.sizeCharts) && p.sizeCharts.length
+                ? p.sizeCharts
+                    .map((g) => ({
+                      title: (g?.title || "").trim(),
+                      rows: Array.isArray(g?.rows)
+                        ? g.rows.filter((r): r is SizeChartRow => Boolean(r?.size))
+                        : [],
+                    }))
+                    .filter((g) => g.title && g.rows.length)
+                : legacyRows.length
+                  ? [{ title: "Size Chart", rows: legacyRows }]
+                  : [];
             return {
               id: p._id,
               name: p.name || "",
@@ -192,9 +212,8 @@ export default function ProductDetailPage() {
                 : [],
               // A row needs a size label to have a leftmost cell; SizeChart
               // drops any measurement column that ends up empty.
-              sizeChart: Array.isArray(p.sizeChart)
-                ? p.sizeChart.filter((r): r is SizeChartRow => Boolean(r?.size))
-                : [],
+              sizeChart: legacyRows,
+              sizeCharts,
               fitFooter: p.fitFooter || "",
               // Older rows may hold anything; keep only keys we can draw.
               careIcons: Array.isArray(p.careIcons) ? p.careIcons.filter(isCareIcon) : [],
@@ -267,7 +286,7 @@ export default function ProductDetailPage() {
   const collectionLabel = product.collectionName || product.category;
   const hasMaterial = !!(product.materialText || product.specs.length || product.fitFooter);
   const hasCare = !!(product.careIcons.length || product.careText);
-  const hasSizeChart = product.sizeChart.length > 0;
+  const hasSizeChart = product.sizeCharts.length > 0;
   const shippingText = product.shippingReturns || DEFAULT_SHIPPING_RETURNS;
 
   const handleAddToCart = () => {
@@ -453,7 +472,15 @@ export default function ProductDetailPage() {
             <div className={product.studioNotes ? "border-t border-line" : "mt-2"}>
               {hasSizeChart && (
                 <Accordion title="Size Chart">
-                  <SizeChart rows={product.sizeChart} />
+                  <div className="space-y-8">
+                    {product.sizeCharts.map((chart, i) => (
+                      <div key={i}>
+                        {/* Editable category heading, e.g. "Top & Dresses" / "Bottom" */}
+                        <p className="eyebrow text-bronze-deep mb-4">{chart.title}</p>
+                        <SizeChart rows={chart.rows} />
+                      </div>
+                    ))}
+                  </div>
                 </Accordion>
               )}
 

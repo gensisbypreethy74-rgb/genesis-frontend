@@ -4,7 +4,7 @@ import Link from "next/link";
 import LegalPage from "../../components/common/LegalPage";
 import measureDiagram from "../../../public/images/size-guide-measure.png";
 import SizeChart from "../../components/ui/SizeChart";
-import { fetchProductById } from "../../lib/product";
+import { fetchProductById, DEFAULT_SIZE_CHARTS, type SizeChartGroup } from "../../lib/product";
 
 // The chart belongs to whichever piece ?product= names, so there is nothing
 // stable to prerender.
@@ -34,7 +34,16 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 export default async function SizeGuidePage({ searchParams }: Props) {
   const id = readId((await searchParams).product);
   const product = id ? await fetchProductById(id) : null;
-  const rows = product?.sizeChart ?? [];
+
+  // A named piece shows its own charts (legacy single chart wrapped as one);
+  // the general guide shows the house-wide defaults.
+  const charts: SizeChartGroup[] = product
+    ? product.sizeCharts?.length
+      ? product.sizeCharts
+      : product.sizeChart?.length
+        ? [{ title: "Size Chart", rows: product.sizeChart }]
+        : []
+    : DEFAULT_SIZE_CHARTS;
 
   return (
     <LegalPage eyebrow="Customer Care" title="Size Guide">
@@ -52,21 +61,28 @@ export default async function SizeGuidePage({ searchParams }: Props) {
       ) : (
         <p>
           Our clothing is drafted for real bodies and tropical weather, with room
-          to move and breathe. Each piece carries its own chart rather than one
-          house-wide table — open a piece and follow{" "}
-          <strong>Find your size</strong> to see the measurements drafted for it.
-          Everything below applies whichever piece you are sizing.
+          to move and breathe. Use our standard charts below as your starting
+          point — one for tops &amp; dresses, one for bottoms. Individual pieces
+          may carry their own chart, so open a piece and follow{" "}
+          <strong>Find your size</strong> for the measurements drafted for it.
         </p>
       )}
 
-      {rows.length > 0 && (
+      {charts.length > 0 && (
         <>
           <h2>Body measurements</h2>
-          <SizeChart rows={rows} />
+          <div className="space-y-10">
+            {charts.map((chart, i) => (
+              <div key={i}>
+                <h3>{chart.title}</h3>
+                <SizeChart rows={chart.rows} />
+              </div>
+            ))}
+          </div>
         </>
       )}
 
-      {product && rows.length === 0 && (
+      {product && charts.length === 0 && (
         <p>
           A chart for this piece has not been published yet. Message us on
           WhatsApp with your measurements and we will size it for you.

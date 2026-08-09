@@ -9,7 +9,8 @@ const COLUMNS: { key: Measurement; label: string }[] = [
   { key: "bust", label: "Bust" },
   { key: "waist", label: "Waist" },
   { key: "hip", label: "Hip" },
-  { key: "length", label: "Length" },
+  { key: "inseam", label: "Inseam" },
+  { key: "length", label: "Total Length" },
 ];
 
 const UNITS = [
