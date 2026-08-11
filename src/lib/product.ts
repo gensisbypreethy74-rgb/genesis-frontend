@@ -31,6 +31,19 @@ export interface SizeChartGroup {
 }
 
 /**
+ * House-wide default specification table — shown on a piece that has no specs of
+ * its own, so every product carries the section until the studio customises it.
+ */
+export const DEFAULT_SPECS: { label: string; value: string }[] = [
+  { label: "Neck", value: "15 in" },
+  { label: "Shoulder", value: "16 in" },
+  { label: "Bust", value: "38 in" },
+  { label: "Waist", value: "32 in" },
+  { label: "Hip", value: "40 in" },
+  { label: "Total Length", value: "44 in" },
+];
+
+/**
  * House-wide default size charts (centimetres) — shown on the general Size Guide
  * when no specific piece is named. Mirrors the admin's DEFAULT_SIZE_CHART_GROUPS.
  */

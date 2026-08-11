@@ -7,7 +7,13 @@ import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
 import { Check, MessageCircle } from "lucide-react";
 import { useCart } from "../../../context/CartContext";
-import { formatINR, type SizeChartRow, type SizeChartGroup } from "../../../lib/product";
+import {
+  formatINR,
+  DEFAULT_SPECS,
+  DEFAULT_SIZE_CHARTS,
+  type SizeChartRow,
+  type SizeChartGroup,
+} from "../../../lib/product";
 import { FIXED_CATEGORIES } from "../../../lib/categories";
 import { Button } from "../../../components/ui/Button";
 import Reveal from "../../../components/ui/Reveal";
@@ -284,9 +290,13 @@ export default function ProductDetailPage() {
   const canAdd = !hasSizes || selectedSize !== null;
 
   const collectionLabel = product.collectionName || product.category;
-  const hasMaterial = !!(product.materialText || product.specs.length || product.fitFooter);
+  // Fall back to the house defaults so every piece carries the spec table and
+  // size chart until the studio customises them for that product.
+  const specsToShow = product.specs.length ? product.specs : DEFAULT_SPECS;
+  const sizeChartsToShow = product.sizeCharts.length ? product.sizeCharts : DEFAULT_SIZE_CHARTS;
+  const hasMaterial = !!(product.materialText || specsToShow.length || product.fitFooter);
   const hasCare = !!(product.careIcons.length || product.careText);
-  const hasSizeChart = product.sizeCharts.length > 0;
+  const hasSizeChart = sizeChartsToShow.length > 0;
   const shippingText = product.shippingReturns || DEFAULT_SHIPPING_RETURNS;
 
   const handleAddToCart = () => {
@@ -473,7 +483,7 @@ export default function ProductDetailPage() {
               {hasSizeChart && (
                 <Accordion title="Size Chart">
                   <div className="space-y-8">
-                    {product.sizeCharts.map((chart, i) => (
+                    {sizeChartsToShow.map((chart, i) => (
                       <div key={i}>
                         {/* Editable category heading, e.g. "Top & Dresses" / "Bottom" */}
                         <p className="eyebrow text-bronze-deep mb-4">{chart.title}</p>
@@ -492,9 +502,9 @@ export default function ProductDetailPage() {
                     </p>
                   )}
 
-                  {product.specs.length > 0 && (
+                  {specsToShow.length > 0 && (
                     <dl className={product.materialText ? "mt-5" : ""}>
-                      {product.specs.map((spec, i) => (
+                      {specsToShow.map((spec, i) => (
                         <div
                           key={`${spec.label}-${i}`}
                           className="flex items-baseline justify-between gap-6 border-b border-line/60 py-3 last:border-b-0"

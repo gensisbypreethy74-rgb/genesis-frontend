@@ -42,7 +42,7 @@ export default async function SizeGuidePage({ searchParams }: Props) {
       ? product.sizeCharts
       : product.sizeChart?.length
         ? [{ title: "Size Chart", rows: product.sizeChart }]
-        : []
+        : DEFAULT_SIZE_CHARTS // no custom chart on this piece → house defaults
     : DEFAULT_SIZE_CHARTS;
 
   return (
