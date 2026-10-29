@@ -6,11 +6,11 @@ import Reveal from "../ui/Reveal";
 import { ButtonLink } from "../ui/Button";
 import ProductCard from "../ui/ProductCard";
 import { isMoment, type Product } from "../../lib/product";
-import { fetchMoment, type SeasonalCollection } from "../../lib/moment";
+import type { Moment, SeasonalCollection } from "../../lib/moment";
+import { API_V1 } from "../../lib/api";
+import { safeHref } from "../../lib/safeHref";
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/api\/?$/, "");
-
-// Text fallbacks — used until the studio's seasonal settings load / if none set.
+// Text fallbacks — used if the studio hasn't set its seasonal copy.
 const FALLBACK: SeasonalCollection = {
   eyebrow: "Now · The Onam Collection",
   heading: "Named for the flowers of the season.",
@@ -19,32 +19,28 @@ const FALLBACK: SeasonalCollection = {
   ctaHref: "/products?category=the-moment",
 };
 
-export default function ProductArchive() {
+/** `moment` is fetched once by the home page on the server and passed down. */
+export default function ProductArchive({ moment }: { moment?: Moment | null }) {
   const [products, setProducts] = useState<Product[]>([]);
-  const [seasonal, setSeasonal] = useState<SeasonalCollection>(FALLBACK);
   const [loading, setLoading] = useState(true);
   const scroller = useRef<HTMLDivElement>(null);
 
+  const seasonal = moment?.seasonal ?? FALLBACK;
+  // The Moment membership is by `category`, not `collectionName`, so any href
+  // that filters on collection or shows the unfiltered shop must be rewritten
+  // to the category filter.
+  const ctaHref =
+    seasonal.ctaHref === "/products" ||
+    seasonal.ctaHref?.startsWith("/products?collection=") ||
+    seasonal.ctaHref?.startsWith("/collections/")
+      ? "/products?category=the-moment"
+      : safeHref(seasonal.ctaHref, "/products");
+
   useEffect(() => {
-    Promise.all([
-      axios.get(`${API_BASE}/api/v1/products`).then((r) => (r.data?.data as Product[]) || []),
-      fetchMoment(),
-    ])
-      .then(([all, moment]) => {
-        const s = moment?.seasonal;
-        if (s) {
-          // The Moment membership is by `category`, not `collectionName`, so any
-          // href that filters on collection or shows the unfiltered shop must be
-          // rewritten to the category filter.
-          if (
-            s.ctaHref === "/products" ||
-            s.ctaHref.startsWith("/products?collection=") ||
-            s.ctaHref.startsWith("/collections/")
-          ) {
-            s.ctaHref = "/products?category=the-moment";
-          }
-          setSeasonal(s);
-        }
+    axios
+      .get(`${API_V1}/products`)
+      .then((r) => (r.data?.data as Product[]) || [])
+      .then((all) => {
         // Membership is the category, set in the Products module. Newest first,
         // following the products API's own order.
         const picked = all.filter(isMoment);
@@ -97,7 +93,7 @@ export default function ProductArchive() {
                 →
               </button>
             </div>
-            <ButtonLink href={seasonal.ctaHref || "/products"} variant="outline" size="sm" arrow={false}>
+            <ButtonLink href={ctaHref} variant="outline" size="sm" arrow={false}>
               {seasonal.ctaLabel || "View All Pieces"}
             </ButtonLink>
           </div>

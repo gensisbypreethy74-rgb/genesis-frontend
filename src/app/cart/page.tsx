@@ -55,7 +55,7 @@ export default function CartPage() {
               </p>
               <div className="border-t border-line">
                 {cartItems.map((item, i) => (
-                  <Reveal key={item.id} delay={i * 0.05}>
+                  <Reveal key={`${item.id}-${item.size ?? ""}`} delay={i * 0.05}>
                     <div className="group flex gap-5 sm:gap-8 py-8 border-b border-line">
                       {/* Thumbnail */}
                       <div className="relative w-24 sm:w-28 aspect-[4/5] bg-sand overflow-hidden flex-shrink-0">

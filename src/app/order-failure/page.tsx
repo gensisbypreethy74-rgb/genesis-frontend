@@ -16,9 +16,11 @@ export default function OrderFailurePage() {
             </h1>
 
             <p className="font-sans text-muted text-base leading-relaxed max-w-md mx-auto mb-12">
-              Your payment could not be processed, so no charge was made. Your
-              items are still saved in your cart. You can try again, or return to
-              review them first.
+              Your payment was not completed, and your items are still saved in
+              your cart. If money did leave your account, there is no need to pay
+              again: check My Orders in a few minutes, as the order is confirmed
+              automatically once the payment reaches us. Otherwise, try again or
+              review your cart first.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

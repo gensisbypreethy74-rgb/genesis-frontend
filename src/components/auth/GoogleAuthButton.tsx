@@ -3,8 +3,10 @@
 import { useState } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
+import { useGoogleLogin } from "@react-oauth/google";
 import { useToast } from "../../context/ToastContext";
 import { useCart } from "../../context/CartContext";
+import { API_V1 } from "../../lib/api";
 
 interface GoogleAuthButtonProps {
   mode?: "signin" | "register";
@@ -23,36 +25,18 @@ function GoogleAuthButtonConfigured({ mode = "signin" }: GoogleAuthButtonProps) 
   const { showToast } = useToast();
   const { syncCartAfterLogin } = useCart();
 
-  // Dynamically import useGoogleLogin only when configured
-  const { useGoogleLogin } = require("@react-oauth/google");
-
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL
-    ? process.env.NEXT_PUBLIC_API_URL.replace("/api", "")
-    : "http://localhost:5000";
-
   const googleLogin = useGoogleLogin({
     flow: "implicit",
-    onSuccess: async (tokenResponse: any) => {
+    onSuccess: async (tokenResponse) => {
       try {
         setLoading(true);
         setError(null);
 
-        // Get user info from Google using access token
-        const userInfo = await axios.get(
-          "https://www.googleapis.com/oauth2/v3/userinfo",
-          { headers: { Authorization: `Bearer ${tokenResponse.access_token}` } }
-        );
-
-        const { sub: googleId, email, name, picture } = userInfo.data;
-
-        // Send to our backend. `mode` tells it whether this is a sign in or a sign up
+        // Send only Google's access token; the backend asks Google who it
+        // belongs to. `mode` tells it whether this is a sign in or a sign up
         // so it can reject signing in when not registered, or signing up when already registered.
-        const res = await axios.post(`${baseUrl}/api/v1/auth/google`, {
-          credential: tokenResponse.access_token,
-          googleId,
-          email,
-          name,
-          picture,
+        const res = await axios.post(`${API_V1}/auth/google`, {
+          accessToken: tokenResponse.access_token,
           mode,
         });
 
@@ -69,16 +53,16 @@ function GoogleAuthButtonConfigured({ mode = "signin" }: GoogleAuthButtonProps) 
           );
           router.push("/");
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error("Google auth error:", err);
         setError(
-          err.response?.data?.message || "Google sign-in failed. Please try again."
+          (axios.isAxiosError(err) && err.response?.data?.message) || "Google sign-in failed. Please try again."
         );
       } finally {
         setLoading(false);
       }
     },
-    onError: (error: any) => {
+    onError: (error) => {
       console.error("Google login error:", error);
       setError("Google sign-in was cancelled or failed. Please try again.");
     },

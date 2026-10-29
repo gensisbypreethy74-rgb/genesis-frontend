@@ -1,4 +1,5 @@
 import axios from "axios";
+import { API_V1 } from "./api";
 
 /**
  * Homepage banners, as the storefront consumes them.
@@ -19,11 +20,6 @@ export interface StoreBanner {
   ctaLabel: string;
   ctaHref: string;
 }
-
-const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(
-  /\/api\/?$/,
-  ""
-);
 
 /** Same shape check the product gallery uses: only refs that can resolve. */
 function isUsableImageRef(url?: string | null): boolean {
@@ -55,7 +51,7 @@ interface ApiBanner {
  * falls back to the wide crop on phones.
  */
 export async function fetchActiveBanners(): Promise<StoreBanner[]> {
-  const res = await axios.get(`${API_ORIGIN}/api/v1/banners`);
+  const res = await axios.get(`${API_V1}/banners`);
   if (!res.data?.success || !Array.isArray(res.data.data)) return [];
 
   return (res.data.data as ApiBanner[])

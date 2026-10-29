@@ -1,20 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import Breadcrumbs from "../../../components/common/Breadcrumbs";
-import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
 import { Check, MessageCircle } from "lucide-react";
 import { useCart } from "../../../context/CartContext";
 import {
   formatINR,
-  DEFAULT_SPECS,
+  fetchProductById,
   DEFAULT_SIZE_CHARTS,
   type SizeChartRow,
   type SizeChartGroup,
 } from "../../../lib/product";
-import { FIXED_CATEGORIES } from "../../../lib/categories";
+import { FIXED_CATEGORIES, fetchActiveCategories } from "../../../lib/categories";
+import { SITE_URL } from "../../../lib/contact";
 import { Button } from "../../../components/ui/Button";
 import Reveal from "../../../components/ui/Reveal";
 import Gallery from "./_components/Gallery";
@@ -48,6 +47,8 @@ interface Variant {
   volume: string;
   price: number;
   oldPrice?: number;
+  /** Undefined = not tracked (always buyable); 0 = sold out. */
+  stock?: number;
 }
 
 interface Spec {
@@ -63,21 +64,18 @@ interface Spec {
  * two meet — it fills defaults and drops anything unrenderable, so the rest of
  * the component can rely on `Product` being complete.
  */
-interface ApiCategory {
-  name?: string;
-  status?: string;
-}
-
 interface ApiVariant {
   volume?: string;
   price?: number;
   oldPrice?: number;
   images?: string[];
+  stock?: number;
 }
 
 interface ApiProduct {
   _id: string;
   name?: string;
+  status?: string;
   category?: string;
   collectionName?: string;
   lifeMode?: string;
@@ -121,6 +119,70 @@ interface Product {
   variants: Variant[];
 }
 
+function toProduct(p: ApiProduct): Product {
+  // Gallery = product-level images plus every variant's images, so
+  // products whose photos live only on variants still render.
+  const gallery: string[] = [
+    ...(p.images || []),
+    ...(p.variants || []).flatMap((v) => v.images || []),
+  ].filter(Boolean);
+  // A row needs a size label; SizeChart drops any empty column.
+  const legacyRows = Array.isArray(p.sizeChart)
+    ? p.sizeChart.filter((r): r is SizeChartRow => Boolean(r?.size))
+    : [];
+  // Named charts win; an older piece's single chart is wrapped as one.
+  const sizeCharts: SizeChartGroup[] =
+    Array.isArray(p.sizeCharts) && p.sizeCharts.length
+      ? p.sizeCharts
+          .map((g) => ({
+            title: (g?.title || "").trim(),
+            rows: Array.isArray(g?.rows)
+              ? g.rows.filter((r): r is SizeChartRow => Boolean(r?.size))
+              : [],
+          }))
+          .filter((g) => g.title && g.rows.length)
+      : legacyRows.length
+        ? [{ title: "Size Chart", rows: legacyRows }]
+        : [];
+  return {
+    id: p._id,
+    name: p.name || "",
+    category: p.category || "",
+    collectionName: p.collectionName || "",
+    lifeMode: p.lifeMode || "",
+    garmentType: p.garmentType || "",
+    tagline: p.tagline || "",
+    fitNote: p.fitNote || "",
+    modelNote: p.modelNote || "",
+    studioNotes: p.studioNotes || "",
+    materialText: p.materialText || "",
+    // Half-filled rows would render as a blank table line.
+    specs: Array.isArray(p.specs)
+      ? p.specs.filter((s): s is Spec => Boolean(s?.label && s?.value))
+      : [],
+    // A row needs a size label to have a leftmost cell; SizeChart
+    // drops any measurement column that ends up empty.
+    sizeChart: legacyRows,
+    sizeCharts,
+    fitFooter: p.fitFooter || "",
+    // Older rows may hold anything; keep only keys we can draw.
+    careIcons: Array.isArray(p.careIcons) ? p.careIcons.filter(isCareIcon) : [],
+    careText: p.careText || "",
+    shippingReturns: p.shippingReturns || "",
+    images: gallery,
+    // A variant without a size label has no button to sit on, so it
+    // is dropped rather than rendered as an empty square.
+    variants: (p.variants || [])
+      .filter((v) => Boolean(v?.volume))
+      .map((v) => ({
+        volume: v.volume as string,
+        price: v.price ?? 0,
+        oldPrice: v.oldPrice,
+        stock: v.stock,
+      })),
+  };
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ProductDetailPage() {
@@ -138,115 +200,34 @@ export default function ProductDetailPage() {
   const { whatsappNumber } = useSettings();
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchProduct = async () => {
       try {
         setLoading(true);
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL
-          ? process.env.NEXT_PUBLIC_API_URL.replace('/api', '')
-          : 'http://localhost:5000';
-
-        const [prodRes, catRes] = await Promise.all([
-          axios.get(`${baseUrl}/api/v1/products`),
-          axios.get(`${baseUrl}/api/v1/categories`)
+        // The category list only feeds the deactivated-category gate below, so
+        // its failure must never make a real product unreachable.
+        const [p, activeCats]: [ApiProduct | null, { name: string }[]] = await Promise.all([
+          fetchProductById(id),
+          fetchActiveCategories().catch(() => []),
         ]);
 
-        const prodJson = prodRes.data;
-        const catJson = catRes.data;
+        // Hide a piece whose category the studio deactivated — but only when the
+        // active-category list actually loaded. Fixed categories (the Edit
+        // sections, The Moment) aren't Category docs, so they always pass.
+        const activeCatNames = activeCats.map((c) => c.name.toLowerCase());
+        const allowed = [...activeCatNames, ...FIXED_CATEGORIES];
+        const visible =
+          p &&
+          p.status !== "Archived" &&
+          (activeCatNames.length === 0 || allowed.includes((p.category || "").toLowerCase()));
 
-        let activeCatNames: string[] = [];
-        if (catJson.success && catJson.data) {
-          activeCatNames = (catJson.data as ApiCategory[])
-            .filter((c) => c.status === "ACTIVE")
-            .map((c) => (c.name || "").toLowerCase());
-        }
-
-        if (prodJson.success && prodJson.data) {
-          // Only hide products in a deactivated category when the active-category
-          // list actually loaded. If categories failed to load, a direct product
-          // link must still resolve rather than 404 — never leave a real product
-          // unreachable because a *separate* request hiccupped.
-          const all = prodJson.data as ApiProduct[];
-          // Fixed categories (the Edit sections, The Moment) aren't Category
-          // docs — let them through the active-category gate so a piece filed
-          // under one stays reachable.
-          const allowed = [...activeCatNames, ...FIXED_CATEGORIES];
-          const activeProducts =
-            activeCatNames.length > 0
-              ? all.filter((p) => allowed.includes((p.category || "").toLowerCase()))
-              : all;
-
-          const mapped: Product[] = activeProducts.map((p) => {
-            // Gallery = product-level images plus every variant's images, so
-            // products whose photos live only on variants still render.
-            const gallery: string[] = [
-              ...(p.images || []),
-              ...(p.variants || []).flatMap((v) => v.images || []),
-            ].filter(Boolean);
-            // A row needs a size label; SizeChart drops any empty column.
-            const legacyRows = Array.isArray(p.sizeChart)
-              ? p.sizeChart.filter((r): r is SizeChartRow => Boolean(r?.size))
-              : [];
-            // Named charts win; an older piece's single chart is wrapped as one.
-            const sizeCharts: SizeChartGroup[] =
-              Array.isArray(p.sizeCharts) && p.sizeCharts.length
-                ? p.sizeCharts
-                    .map((g) => ({
-                      title: (g?.title || "").trim(),
-                      rows: Array.isArray(g?.rows)
-                        ? g.rows.filter((r): r is SizeChartRow => Boolean(r?.size))
-                        : [],
-                    }))
-                    .filter((g) => g.title && g.rows.length)
-                : legacyRows.length
-                  ? [{ title: "Size Chart", rows: legacyRows }]
-                  : [];
-            return {
-              id: p._id,
-              name: p.name || "",
-              category: p.category || "",
-              collectionName: p.collectionName || "",
-              lifeMode: p.lifeMode || "",
-              garmentType: p.garmentType || "",
-              tagline: p.tagline || "",
-              fitNote: p.fitNote || "",
-              modelNote: p.modelNote || "",
-              studioNotes: p.studioNotes || "",
-              materialText: p.materialText || "",
-              // Half-filled rows would render as a blank table line.
-              specs: Array.isArray(p.specs)
-                ? p.specs.filter((s): s is Spec => Boolean(s?.label && s?.value))
-                : [],
-              // A row needs a size label to have a leftmost cell; SizeChart
-              // drops any measurement column that ends up empty.
-              sizeChart: legacyRows,
-              sizeCharts,
-              fitFooter: p.fitFooter || "",
-              // Older rows may hold anything; keep only keys we can draw.
-              careIcons: Array.isArray(p.careIcons) ? p.careIcons.filter(isCareIcon) : [],
-              careText: p.careText || "",
-              shippingReturns: p.shippingReturns || "",
-              images: gallery,
-              // A variant without a size label has no button to sit on, so it
-              // is dropped rather than rendered as an empty square.
-              variants: (p.variants || [])
-                .filter((v) => Boolean(v?.volume))
-                .map((v) => ({
-                  volume: v.volume as string,
-                  price: v.price ?? 0,
-                  oldPrice: v.oldPrice,
-                })),
-            };
-          });
-          const found = mapped.find((p) => p.id === id) || null;
-          setProduct(found);
-        }
+        setProduct(visible ? toProduct(p) : null);
       } catch (error) {
         console.error("Failed to fetch product:", error);
       } finally {
         setLoading(false);
       }
     };
-    if (id) fetchProducts();
+    if (id) fetchProduct();
   }, [id]);
 
   if (loading) {
@@ -282,17 +263,23 @@ export default function ProductDetailPage() {
   // garment share a price in practice, so the first variant is representative.
   const priceVariant = selectedVariant ?? product.variants[0];
   const price = priceVariant?.price ?? 0;
+  // No price means "Enquire", as on the product cards — it can't go in the bag.
+  const enquire = price <= 0;
   const oldPrice =
-    priceVariant?.oldPrice && priceVariant.oldPrice > price ? priceVariant.oldPrice : undefined;
+    !enquire && priceVariant?.oldPrice && priceVariant.oldPrice > price
+      ? priceVariant.oldPrice
+      : undefined;
+  // Stock is only tracked when the studio enters it; 0 means that size is gone.
+  const soldOut = selectedVariant?.stock === 0;
 
   // A piece with no variants at all has nothing to choose, so it stays buyable
   // without a selection — the backend resolves the size in that case.
-  const canAdd = !hasSizes || selectedSize !== null;
+  const canAdd = (!hasSizes || selectedSize !== null) && !soldOut && !enquire;
 
   const collectionLabel = product.collectionName || product.category;
-  // Fall back to the house defaults so every piece carries the spec table and
-  // size chart until the studio customises them for that product.
-  const specsToShow = product.specs.length ? product.specs : DEFAULT_SPECS;
+  // Specs are this piece's own measurements, so a piece without any shows none.
+  // The size chart still falls back to the house-wide sizing.
+  const specsToShow = product.specs;
   const sizeChartsToShow = product.sizeCharts.length ? product.sizeCharts : DEFAULT_SIZE_CHARTS;
   const hasMaterial = !!(product.materialText || specsToShow.length || product.fitFooter);
   const hasCare = !!(product.careIcons.length || product.careText);
@@ -322,6 +309,13 @@ export default function ProductDetailPage() {
     setAdded(true);
     setTimeout(() => setAdded(false), 2500);
   };
+
+  const productUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/products/${product.id}`
+      : `${SITE_URL}/products/${product.id}`;
+  const waMessage = `*${product.name}*\n${productUrl}\n\nI'm interested in this product and I have a few questions. Can you help?`;
+  const waUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(waMessage)}`;
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-ivory pt-[68px] text-ink lg:pt-[84px]">
@@ -369,7 +363,7 @@ export default function ProductDetailPage() {
             {/* Price — follows the selected size */}
             <div className="mt-6 flex items-baseline gap-3">
               <span className="font-display text-3xl font-light text-ink">
-                {formatINR(price)}
+                {enquire ? "Enquire" : formatINR(price)}
               </span>
               {oldPrice && (
                 <span className="font-display text-xl text-faint line-through">
@@ -405,27 +399,40 @@ export default function ProductDetailPage() {
               </div>
             )}
 
-            {/* Add to bag */}
-            <button
-              type="button"
-              onClick={handleAddToCart}
-              disabled={!canAdd}
-              className={`mt-8 inline-flex w-full items-center justify-center gap-2.5 py-4 font-sans text-[11px] uppercase tracking-[0.18em] transition-colors duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                canAdd
-                  ? "cursor-pointer bg-ink text-ivory hover:bg-forest"
-                  : "cursor-not-allowed bg-sand text-muted"
-              }`}
-            >
-              {added ? (
-                <>
-                  <Check size={15} strokeWidth={1.5} aria-hidden /> Added to bag
-                </>
-              ) : canAdd ? (
-                "Add to bag"
-              ) : (
-                "Select a size"
-              )}
-            </button>
+            {/* Add to bag — or, for an unpriced piece, ask the studio */}
+            {enquire ? (
+              <a
+                href={waUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-8 inline-flex w-full items-center justify-center gap-2.5 py-4 font-sans text-[11px] uppercase tracking-[0.18em] transition-colors duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] cursor-pointer bg-ink text-ivory hover:bg-forest"
+              >
+                Enquire on WhatsApp
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={!canAdd}
+                className={`mt-8 inline-flex w-full items-center justify-center gap-2.5 py-4 font-sans text-[11px] uppercase tracking-[0.18em] transition-colors duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                  canAdd
+                    ? "cursor-pointer bg-ink text-ivory hover:bg-forest"
+                    : "cursor-not-allowed bg-sand text-muted"
+                }`}
+              >
+                {added ? (
+                  <>
+                    <Check size={15} strokeWidth={1.5} aria-hidden /> Added to bag
+                  </>
+                ) : soldOut ? (
+                  "Sold out"
+                ) : canAdd ? (
+                  "Add to bag"
+                ) : (
+                  "Select a size"
+                )}
+              </button>
+            )}
 
             {/* Service notes */}
             <div className="mt-6 flex flex-col gap-2.5">
@@ -438,31 +445,20 @@ export default function ProductDetailPage() {
                 />
                 {MADE_IN_NOTE}
               </p>
-              {(() => {
-                const productUrl =
-                  typeof window !== "undefined"
-                    ? `${window.location.origin}/products/${product.id}`
-                    : `https://genesisbypreethy.com/products/${product.id}`;
-                
-                const message = `*${product.name}*\n${productUrl}\n\nI'm interested in this product and I have a few questions. Can you help?`;
-                const waUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
-                return (
-                  <a
-                    href={waUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-start gap-2.5 font-sans text-[13px] leading-relaxed text-muted transition-colors duration-300 hover:text-ink"
-                  >
-                    <MessageCircle
-                      size={14}
-                      strokeWidth={1.5}
-                      aria-hidden
-                      className="mt-[3px] shrink-0"
-                    />
-                    <span className="link-underline">Questions about fit? Message us on WhatsApp.</span>
-                  </a>
-                );
-              })()}
+              <a
+                href={waUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start gap-2.5 font-sans text-[13px] leading-relaxed text-muted transition-colors duration-300 hover:text-ink"
+              >
+                <MessageCircle
+                  size={14}
+                  strokeWidth={1.5}
+                  aria-hidden
+                  className="mt-[3px] shrink-0"
+                />
+                <span className="link-underline">Questions about fit? Message us on WhatsApp.</span>
+              </a>
             </div>
 
             {/* Divider — the accordions below always render, so this never dangles */}

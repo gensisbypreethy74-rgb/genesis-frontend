@@ -4,8 +4,7 @@ import { useState } from "react";
 import axios from "axios";
 import Reveal from "../ui/Reveal";
 import { useToast } from "../../context/ToastContext";
-
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/api\/?$/, "");
+import { API_V1 } from "../../lib/api";
 
 export default function StudioNewsletter() {
   const [email, setEmail] = useState("");
@@ -21,7 +20,7 @@ export default function StudioNewsletter() {
     }
     setSubmitting(true);
     try {
-      const res = await axios.post(`${API_BASE}/api/v1/newsletter/subscribe`, {
+      const res = await axios.post(`${API_V1}/newsletter/subscribe`, {
         email: value,
         source: "home-studio",
       });
@@ -31,8 +30,9 @@ export default function StudioNewsletter() {
       } else {
         showToast(res.data?.message || "Could not subscribe. Try again.", "error");
       }
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Could not subscribe. Try again.";
+    } catch (err) {
+      const msg =
+        (axios.isAxiosError(err) && err.response?.data?.message) || "Could not subscribe. Try again.";
       showToast(msg, "error");
     } finally {
       setSubmitting(false);
@@ -59,7 +59,7 @@ export default function StudioNewsletter() {
             <div className="p-8 sm:p-12 lg:p-16 bg-tan/40">
               <p className="eyebrow text-bronze-deep mb-6">Notes from the Studio</p>
               <p className="font-display text-[19px] leading-relaxed text-ink/80 max-w-md mb-8">
-                Slow letters about clothing, climate, and getting dressed for the life you're
+                Slow letters about clothing, climate, and getting dressed for the life you&apos;re
                 actually living.
               </p>
               <form onSubmit={subscribe} className="max-w-md">

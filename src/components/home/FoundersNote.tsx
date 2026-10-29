@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import EditorialImage from "../ui/EditorialImage";
 import { fetchFounderNote, type FounderNote } from "../../lib/founder";
 
@@ -19,11 +19,12 @@ const DEFAULTS: FounderNote = {
   image: "/images/saree-with-wome20.png",
 };
 
-export default function FoundersNote() {
-  const reduce = useReducedMotion();
-  const fromLeft = reduce ? {} : { initial: { opacity: 0, x: -40 }, whileInView: { opacity: 1, x: 0 } };
-  const fromRight = reduce ? {} : { initial: { opacity: 0, x: 40 }, whileInView: { opacity: 1, x: 0 } };
+// Same markup on server and client; reduced motion is handled by the root
+// MotionConfig, which drops the slide and keeps the fade.
+const fromLeft = { initial: { opacity: 0, x: -40 }, whileInView: { opacity: 1, x: 0 } };
+const fromRight = { initial: { opacity: 0, x: 40 }, whileInView: { opacity: 1, x: 0 } };
 
+export default function FoundersNote() {
   const [note, setNote] = useState<FounderNote>(DEFAULTS);
   useEffect(() => {
     fetchFounderNote().then((n) => n && setNote(n));

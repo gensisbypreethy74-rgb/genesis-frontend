@@ -10,6 +10,8 @@ export interface SizeOption {
    * carried through as-is and only *labelled* "Size" in the UI.
    */
   volume: string;
+  /** 0 = sold out. Undefined means stock isn't tracked for this size. */
+  stock?: number;
 }
 
 interface SizeSelectorProps {
@@ -96,6 +98,9 @@ export default function SizeSelector({
       >
         {options.map((option, i) => {
           const isSelected = selected === i;
+          // Still selectable, so the shopper learns that size is gone; the
+          // page disables Add to bag for it.
+          const soldOut = option.stock === 0;
           return (
             <button
               key={`${option.volume}-${i}`}
@@ -113,10 +118,13 @@ export default function SizeSelector({
               className={`h-12 min-w-12 cursor-pointer border px-3 font-sans text-[13px] tracking-[0.08em] transition-colors duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                 isSelected
                   ? "border-ink bg-ink text-ivory"
-                  : "border-line text-muted hover:border-ink hover:text-ink"
-              }`}
+                  : soldOut
+                    ? "border-line text-faint hover:border-ink"
+                    : "border-line text-muted hover:border-ink hover:text-ink"
+              } ${soldOut ? "line-through" : ""}`}
             >
               {option.volume}
+              {soldOut && <span className="sr-only">, sold out</span>}
             </button>
           );
         })}

@@ -1,7 +1,15 @@
 import { ButtonLink } from '../../components/ui/Button';
 import Breadcrumbs from '../../components/common/Breadcrumbs';
 
-export default function OrderSuccessPage() {
+export default async function OrderSuccessPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  // Checkout passes the order's ID; only a well-formed one is shown.
+  const { id } = await searchParams;
+  const orderId = typeof id === 'string' && /^[0-9a-f]{24}$/i.test(id) ? id : null;
+
   return (
     <div className="min-h-screen bg-ivory pt-[84px] pb-24 px-6 sm:px-10 flex flex-col">
       {/* Breadcrumb pinned near the top; the card stays centred in the space
@@ -21,6 +29,12 @@ export default function OrderSuccessPage() {
             details and status in your profile. Each piece is checked by hand
             before it leaves Kochi.
           </p>
+
+          {orderId && (
+            <p className="font-sans text-sm text-ink -mt-6 mb-12">
+              Order ID <span className="font-medium select-all">{orderId}</span>
+            </p>
+          )}
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <ButtonLink href="/profile" variant="solid" size="md">

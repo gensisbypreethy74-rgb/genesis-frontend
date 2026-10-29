@@ -9,7 +9,8 @@ import StudioNotes from "../components/home/StudioNotes";
 import StudioNewsletter from "../components/home/StudioNewsletter";
 import { fetchMoment } from "../lib/moment";
 
-export const dynamic = "force-dynamic";
+// Re-rendered at most once a minute, so studio edits show up within that window.
+export const revalidate = 60;
 
 /**
  * Single-page site. Home section order:
@@ -36,7 +37,7 @@ export default async function Home() {
       <CategoryGrid />
       <TheMoment moment={moment} />
       <MomentExplainer moment={moment} />
-      <ProductArchive />
+      <ProductArchive moment={moment} />
       <StudioNotes />
       <StudioNewsletter />
     </main>

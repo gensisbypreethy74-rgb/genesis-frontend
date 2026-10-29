@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { cldOptimize } from "../../lib/image";
 
 interface EditorialImageProps {
@@ -34,19 +35,32 @@ export default function EditorialImage({
 }: EditorialImageProps) {
   const [errored, setErrored] = useState(false);
   const show = src && !errored;
+  const imgClass = `h-full w-full object-cover transition-transform duration-[900ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
+    zoom ? "group-hover:scale-[1.04]" : ""
+  }`;
 
   return (
     <div className={`relative overflow-hidden ${ratio} ${className}`}>
-      {show ? (
+      {show && src.startsWith("/images/") ? (
+        // A bundled photo (1–2 MB PNGs): next/image serves it resized and as
+        // WebP/AVIF. Studio uploads stay on <img> + cldOptimize below.
+        <Image
+          src={src}
+          alt={alt}
+          fill
+          sizes="(max-width: 1024px) 100vw, 50vw"
+          priority={priority}
+          onError={() => setErrored(true)}
+          className={imgClass}
+        />
+      ) : show ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={cldOptimize(src!, width)}
+          src={cldOptimize(src, width)}
           alt={alt}
           loading={priority ? "eager" : "lazy"}
           onError={() => setErrored(true)}
-          className={`h-full w-full object-cover transition-transform duration-[900ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
-            zoom ? "group-hover:scale-[1.04]" : ""
-          }`}
+          className={imgClass}
         />
       ) : (
         <div className="img-placeholder h-full w-full flex items-center justify-center">

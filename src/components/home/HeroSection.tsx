@@ -5,16 +5,16 @@ import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion
 import { ButtonLink } from "../ui/Button";
 import { cldOptimize } from "../../lib/image";
 import { fetchActiveBanners, type StoreBanner } from "../../lib/banners";
+import { safeHref } from "../../lib/safeHref";
 
 const ease = [0.16, 1, 0.3, 1] as const;
 
 /**
  * Shown until banners load, and kept as the floor if the studio has none
  * published or the request fails — the hero is the whole first screen, so it
- * must never be empty.
+ * must never be empty. Also what a dead banner URL falls back to.
  */
 const HERO_IMAGE = "/images/image.png";
-const HERO_FALLBACK = "/hero-bg.png";
 
 /** Below this, phones get the banner's tall crop. Matches Tailwind's `md`. */
 const MOBILE_BREAKPOINT = "(max-width: 767px)";
@@ -66,7 +66,7 @@ export default function HeroSection() {
     current?.title ||
     "Tropical-intelligent clothing, drawn from a life lived in heat, humidity and rain.";
   const ctaLabel = current?.ctaLabel || "Explore the Edit";
-  const ctaHref = current?.ctaHref || "/products?collection=onam";
+  const ctaHref = safeHref(current?.ctaHref, "/products?collection=onam");
 
   // Layers to paint: real banners, or a single bundled fallback when none.
   const layers = banners.length > 0 ? banners : [null];
@@ -109,8 +109,8 @@ export default function HeroSection() {
                     loading={i === 0 ? "eager" : "lazy"}
                     onError={(e) => {
                       // Dead banner URL → bundled photo, once.
-                      if (!e.currentTarget.src.endsWith(HERO_FALLBACK)) {
-                        e.currentTarget.src = HERO_FALLBACK;
+                      if (!e.currentTarget.src.endsWith(HERO_IMAGE)) {
+                        e.currentTarget.src = HERO_IMAGE;
                       }
                     }}
                     className="h-[116%] w-full object-cover object-center"
@@ -128,7 +128,9 @@ export default function HeroSection() {
       <div className="relative z-10 h-full max-w-[1500px] mx-auto px-6 sm:px-10 lg:px-16 flex items-end pb-20 sm:items-center sm:pb-0">
         <motion.div
           key={index}
-          initial={{ opacity: 0, y: reduce ? 0 : 16 }}
+          // Fixed `y` keeps server and client markup identical; the root
+          // MotionConfig skips the movement under reduced motion.
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease }}
           className="max-w-2xl"

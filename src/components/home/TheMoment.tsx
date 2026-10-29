@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import type { Moment } from "../../lib/moment";
+import { safeHref } from "../../lib/safeHref";
 
 /* Bespoke dark palette for this section (per spec) */
 const C = {
@@ -36,9 +37,11 @@ export default function TheMoment({ moment }: { moment?: Moment | null }) {
     rawShopHref.startsWith("/products?collection=") ||
     rawShopHref.startsWith("/collections/")
       ? "/products?category=the-moment"
-      : rawShopHref;
+      : safeHref(rawShopHref, "/products?category=the-moment");
 
-  // Staggered fade + upward translate; opacity-only when reduced motion is on.
+  // Staggered fade + upward translate. The root MotionConfig drops the
+  // translate under reduced motion; `y` stays fixed here so the server and
+  // client render the same starting style.
   const container = {
     hidden: {},
     show: {
@@ -46,7 +49,7 @@ export default function TheMoment({ moment }: { moment?: Moment | null }) {
     },
   };
   const item = {
-    hidden: { opacity: 0, y: reduce ? 0 : 20 },
+    hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0, transition: { duration: 0.65, ease } },
   };
 
@@ -120,8 +123,8 @@ export default function TheMoment({ moment }: { moment?: Moment | null }) {
                 backgroundColor: C.primary,
                 color: C.bg,
                 // focus ring colors
-                ["--tw-ring-color" as any]: C.primary,
-                ["--tw-ring-offset-color" as any]: C.bg,
+                "--tw-ring-color": C.primary,
+                "--tw-ring-offset-color": C.bg,
               } as React.CSSProperties
             }
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = C.btnHover)}
@@ -138,8 +141,8 @@ export default function TheMoment({ moment }: { moment?: Moment | null }) {
               {
                 borderColor: C.primary,
                 color: C.primary,
-                ["--tw-ring-color" as any]: C.primary,
-                ["--tw-ring-offset-color" as any]: C.bg,
+                "--tw-ring-color": C.primary,
+                "--tw-ring-offset-color": C.bg,
               } as React.CSSProperties
             }
             onMouseEnter={(e) => {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import LegalPage from "../../components/common/LegalPage";
 
 export const metadata: Metadata = {
+  title: "Privacy Policy",
   description:
     "Read the Privacy Policy of Genesis by Preethy. Learn how we collect, use, and protect your data.",
 };
@@ -58,7 +59,7 @@ export default function PrivacyPolicyPage() {
       </p>
 
       {/* The footer's "Cookie Preferences" link targets this id. */}
-      <h2 id="cookies">5. Cookies</h2>
+      <h2 id="cookies" className="scroll-mt-[88px]">5. Cookies</h2>
       <p>
         Our website may use cookies to improve your browsing experience and analyze
         website traffic. You may disable cookies through your browser settings if

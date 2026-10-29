@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import ProductBrowser from "../../../components/shop/ProductBrowser";
+
+export const metadata: Metadata = { title: "The Onam Collection" };
 
 /**
  * The dedicated Onam Collection page — the same shop browser (sidebar filters,

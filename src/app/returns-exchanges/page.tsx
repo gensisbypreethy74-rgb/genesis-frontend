@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import LegalPage from "../../components/common/LegalPage";
 
 export const metadata: Metadata = {
+  title: "Returns & Exchanges",
   description:
     "Our returns and exchange window, conditions and step-by-step process for Genesis by Preethy orders.",
 };
