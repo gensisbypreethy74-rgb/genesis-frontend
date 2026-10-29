@@ -306,7 +306,7 @@ export default function CheckoutPage() {
         key: key_id,
         amount: razorpayOrder.amount,
         currency: razorpayOrder.currency,
-        name: "genesisbypreethy",
+        name: "GenesisbyPreethy",
         description: isCod ? "Advance Payment (10%)" : "Order Payment",
         order_id: razorpayOrder.id,
         handler: verify,
