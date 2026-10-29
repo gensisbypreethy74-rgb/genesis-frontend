@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
-import { Inter, Cormorant_Garamond, Geist_Mono } from "next/font/google";
+import { Inter, Cormorant_Garamond } from "next/font/google";
+import { MotionConfig } from "framer-motion";
 import "./globals.css";
 import Navbar from "../components/common/Navbar";
 import Footer from "../components/common/Footer";
+import { SITE_URL } from "../lib/contact";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -17,15 +19,11 @@ const cormorant = Cormorant_Garamond({
   display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  metadataBase: new URL('https://genesisbypreethy.com'),
+  metadataBase: new URL(SITE_URL),
   title: {
-    absolute: "Genesis by Preethy – Tropical-Intelligent Clothing",
+    default: "Genesis by Preethy – Tropical-Intelligent Clothing",
+    template: "%s · Genesis by Preethy",
   },
   description:
     "Natural clothing for tropical climates, designed in Kochi for heat, humidity and rain. Considered production, not mass volume.",
@@ -33,8 +31,8 @@ export const metadata: Metadata = {
     images: [
       {
         url: '/images/og-image.png',
-        width: 1200,
-        height: 630,
+        width: 848,
+        height: 766,
         alt: 'Genesis by Preethy'
       }
     ],
@@ -58,22 +56,33 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${cormorant.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${cormorant.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col relative bg-ivory text-ink" suppressHydrationWarning>
-        <ToastProvider>
-          <SettingsProvider>
-            <CartProvider>
-              <GoogleOAuthWrapper>
-                <Navbar />
-                {children}
-                <Footer />
-              </GoogleOAuthWrapper>
-            </CartProvider>
-          </SettingsProvider>
-        </ToastProvider>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-100 focus:bg-ink focus:text-ivory focus:px-5 focus:py-3 eyebrow"
+        >
+          Skip to content
+        </a>
+        {/* "user": framer-motion follows the OS reduce-motion setting itself, so
+            every component renders the same markup on server and client. */}
+        <MotionConfig reducedMotion="user">
+          <ToastProvider>
+            <SettingsProvider>
+              <CartProvider>
+                <GoogleOAuthWrapper>
+                  <Navbar />
+                  {/* Skip-link target: focus lands here, past the header. */}
+                  <div id="main-content" tabIndex={-1} className="outline-none" />
+                  {children}
+                  <Footer />
+                </GoogleOAuthWrapper>
+              </CartProvider>
+            </SettingsProvider>
+          </ToastProvider>
+        </MotionConfig>
       </body>
     </html>
   );
 }
-

@@ -112,11 +112,9 @@ export default function HeroSection() {
     }];
   }
 
-  useEffect(() => {
-    if (currentSlide >= finalSlides.length) {
-      setCurrentSlide(0);
-    }
-  }, [finalSlides.length, currentSlide]);
+  // If the slide list shrinks (e.g. switching to mobile drops slides without a
+  // mobile image), fall back to the first slide. Derived, not synced via an effect.
+  const activeSlide = currentSlide < finalSlides.length ? currentSlide : 0;
 
   useEffect(() => {
     if (isLoading || finalSlides.length <= 1) return;
@@ -131,7 +129,7 @@ export default function HeroSection() {
   };
 
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev === 0 ? finalSlides.length - 1 : prev - 1));
+    setCurrentSlide(activeSlide === 0 ? finalSlides.length - 1 : activeSlide - 1);
   };
 
   const goToSlide = (index: number) => {
@@ -185,7 +183,7 @@ export default function HeroSection() {
             className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#aea3cf]/95"
           >
             <h1 className="text-white font-sans font-black text-6xl md:text-8xl tracking-[0.2em] uppercase mb-8">
-              NEOKART
+              GenesisbyPrethi
             </h1>
             <div className="w-64 md:w-80 h-[2px] bg-white/25 overflow-hidden relative">
               <motion.div
@@ -202,7 +200,7 @@ export default function HeroSection() {
       {/* Background & Content Layer */}
       <AnimatePresence mode="sync">
         {finalSlides.map((slide, index) =>
-          index === currentSlide ? (
+          index === activeSlide ? (
             <motion.div
               key={slide.id}
               initial={{ opacity: 0 }}
@@ -290,10 +288,10 @@ export default function HeroSection() {
               <button
                 key={slide.id}
                 role="tab"
-                aria-selected={currentSlide === index}
+                aria-selected={activeSlide === index}
                 aria-label={`Go to slide ${index + 1}`}
                 onClick={() => goToSlide(index)}
-                className={`transition-colors duration-300 motion-reduce:transition-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black ${currentSlide === index
+                className={`transition-colors duration-300 motion-reduce:transition-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black ${activeSlide === index
                     ? "w-2.5 h-2.5 rounded-full bg-blue-500"
                     : "w-2.5 h-2.5 rounded-full bg-white/50"
                   }`}

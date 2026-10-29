@@ -17,7 +17,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
   --font-serif: var(--font-cormorant);
-  --font-mono: var(--font-geist-mono);
 }
 
 @theme {
@@ -145,22 +144,6 @@ section[id] {
 /* Hide scrollbar */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-/* ── Radix Accordion smooth height animation ─────────────────────────────── */
-@keyframes accordion-open {
-  from { height: 0; opacity: 0; }
-  to { height: var(--radix-accordion-content-height); opacity: 1; }
-}
-@keyframes accordion-close {
-  from { height: var(--radix-accordion-content-height); opacity: 1; }
-  to { height: 0; opacity: 0; }
-}
-.accordion-content[data-state="open"] {
-  animation: accordion-open 0.4s var(--ease-editorial) forwards;
-}
-.accordion-content[data-state="closed"] {
-  animation: accordion-close 0.3s var(--ease-editorial) forwards;
-}
 
 /* ── Fade-in-up entrance ─────────────────────────────────────────────────── */
 @keyframes fadeInUp {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Breadcrumbs from "../../components/common/Breadcrumbs";
 import axios from "axios";
 import { useCart } from "../../context/CartContext";
@@ -9,12 +9,67 @@ import { useToast } from "../../context/ToastContext";
 import { Button } from "../../components/ui/Button";
 import Reveal from "../../components/ui/Reveal";
 import { cldOptimize } from "../../lib/image";
+import { API_V1 } from "../../lib/api";
+
+interface SavedAddress {
+  _id: string;
+  street?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+}
+
+interface AddressTile {
+  id: string;
+  name: string;
+  line1: string;
+  line2?: string;
+}
+
+interface RazorpayResponse {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}
+
+declare global {
+  interface Window {
+    Razorpay?: new (options: Record<string, unknown>) => { open: () => void; on: (event: string, cb: (r: unknown) => void) => void };
+  }
+}
+
+const toTiles = (list: SavedAddress[]): AddressTile[] =>
+  list.map((addr) => ({
+    id: addr._id,
+    name: addr.city?.toLowerCase() || 'Address',
+    line1: `${addr.street ? addr.street + ", " : ""}${addr.state?.toLowerCase() || ''}`,
+    line2: addr.zipCode,
+  }));
+
+const errorMessage = (err: unknown, fallback: string) =>
+  (axios.isAxiosError(err) && err.response?.data?.message) || fallback;
+
+// Razorpay's checkout script, added to the page once.
+const loadRazorpayScript = () =>
+  new Promise<boolean>((resolve) => {
+    if (window.Razorpay) return resolve(true);
+    const existing = document.querySelector<HTMLScriptElement>('script[data-razorpay]');
+    const script = existing ?? document.createElement("script");
+    script.addEventListener("load", () => resolve(true));
+    script.addEventListener("error", () => resolve(false));
+    if (!existing) {
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.dataset.razorpay = "true";
+      document.body.appendChild(script);
+    }
+  });
 
 export default function CheckoutPage() {
-  const { cartItems, clearCart } = useCart();
+  const router = useRouter();
+  const { cartItems, clearLocalCart, refreshCart } = useCart();
   const { showToast } = useToast();
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
-  const [addresses, setAddresses] = useState<any[]>([]);
+  const [addresses, setAddresses] = useState<AddressTile[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState("");
   const [newAddressForm, setNewAddressForm] = useState({
     street: "",
@@ -34,26 +89,33 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<"online" | "cod">("online");
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
+  // Shared helper: the signed-in customer's token, or null.
+  const readToken = (): string | null => {
+    try {
+      return JSON.parse(localStorage.getItem("heedy_user") || "null")?.token ?? null;
+    } catch {
+      return null;
+    }
+  };
+
   useEffect(() => {
+    const token = readToken();
+    // Checkout needs an account (orders, addresses and receipts belong to one).
+    if (!token) {
+      showToast("Please sign in to check out.", "warning");
+      router.replace("/sign-in");
+      return;
+    }
+    // Show the bag at today's prices, which is what the server will charge.
+    refreshCart();
+
     const fetchAddresses = async () => {
       try {
-        const userStr = localStorage.getItem("heedy_user");
-        if (!userStr) return;
-        const { token } = JSON.parse(userStr);
-        if (!token) return;
-
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, "") : 'http://localhost:5000';
-        const API_URL = `${baseUrl}/api`;
-        const res = await axios.get(`${API_URL}/v1/users/addresses`, {
+        const res = await axios.get(`${API_V1}/users/addresses`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.data.success && res.data.data) {
-          const mappedAddresses = res.data.data.map((addr: any) => ({
-            id: addr._id,
-            name: addr.city?.toLowerCase() || 'Address',
-            line1: `${addr.street ? addr.street + ", " : ""}${addr.state?.toLowerCase() || ''}`,
-            line2: addr.zipCode,
-          }));
+          const mappedAddresses = toTiles(res.data.data);
           setAddresses(mappedAddresses);
           if (mappedAddresses.length > 0) {
             setSelectedAddressId(mappedAddresses[0].id);
@@ -64,7 +126,19 @@ export default function CheckoutPage() {
       }
     };
     fetchAddresses();
+    // Runs once on mount; router/toast/cart helpers are stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Escape closes the address dialog.
+  useEffect(() => {
+    if (!isAddressModalOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsAddressModalOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isAddressModalOpen]);
 
   const validateAddressForm = () => {
     const errors: Record<string, string> = {};
@@ -82,16 +156,12 @@ export default function CheckoutPage() {
     setIsSavingAddress(true);
 
     try {
-      const userStr = localStorage.getItem("heedy_user");
-      if (!userStr) {
+      const token = readToken();
+      if (!token) {
         showToast("Please login to save your address.", "warning");
         setIsSavingAddress(false);
         return;
       }
-
-      const { token } = JSON.parse(userStr);
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, "") : 'http://localhost:5000';
-      const API_URL = `${baseUrl}/api`;
 
       const payload = {
         street: newAddressForm.street,
@@ -101,7 +171,7 @@ export default function CheckoutPage() {
         country: newAddressForm.country
       };
 
-      const res = await axios.post(`${API_URL}/v1/users/addresses`, payload, {
+      const res = await axios.post(`${API_V1}/users/addresses`, payload, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -109,13 +179,7 @@ export default function CheckoutPage() {
       });
 
       if (res.data.success) {
-        const newAddrs = res.data.data;
-        const mappedAddresses = newAddrs.map((addr: any) => ({
-          id: addr._id,
-          name: addr.city?.toLowerCase() || 'Address',
-          line1: `${addr.street ? addr.street + ", " : ""}${addr.state?.toLowerCase() || ''}`,
-          line2: addr.zipCode,
-        }));
+        const mappedAddresses = toTiles(res.data.data);
         setAddresses(mappedAddresses);
         if (mappedAddresses.length > 0) {
           setSelectedAddressId(mappedAddresses[mappedAddresses.length - 1].id);
@@ -126,32 +190,22 @@ export default function CheckoutPage() {
       } else {
         showToast(res.data.message || "Failed to save address", "error");
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      showToast(err.response?.data?.message || "Error saving address", "error");
+      showToast(errorMessage(err, "Error saving address"), "error");
     } finally {
       setIsSavingAddress(false);
     }
   };
 
+  // Display only: the server prices the order and is what Razorpay charges.
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const shipping = 0;
   const total = Math.max(0, subtotal);
 
   // Cash on Delivery requires a 10% advance paid online; the balance is collected on delivery.
   const ADVANCE_RATE = 0.1;
   const advanceAmount = Math.round(total * ADVANCE_RATE * 100) / 100;
   const balanceAmount = Math.round((total - advanceAmount) * 100) / 100;
-
-  const loadRazorpayScript = () => {
-    return new Promise((resolve) => {
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  };
 
   // Validates the shipping step, then reveals the payment-method selection.
   const goToPayment = () => {
@@ -174,55 +228,17 @@ export default function CheckoutPage() {
     }
   }, [step]);
 
-  // Shared helpers for building the order payload sent to the backend.
-  const getAuthToken = (): string | null => {
-    const userStr = localStorage.getItem("heedy_user");
-    if (!userStr) {
-      showToast("Please login to proceed.", "warning");
-      return null;
-    }
-    return JSON.parse(userStr).token;
-  };
-
-  const buildOrderPayload = () => {
-    const selectedAddress = addresses.find(a => a.id === selectedAddressId);
-    const orderItems = cartItems.map(item => ({
-      product: item.id,
-      quantity: item.quantity,
-      price: item.price,
-      size: item.size,
-    }));
-    const orderShippingAddress = {
-      street: selectedAddress?.line1.split(", ")[0] || '',
-      city: selectedAddress?.name || '',
-      state: selectedAddress?.line1.split(", ")[1] || '',
-      zipCode: selectedAddress?.line2 || '',
-      country: "India",
-    };
-    return { orderItems, orderShippingAddress };
-  };
-
   // Routes "Place Order" to the chosen payment method.
   // Online payment charges the full total; COD charges only the 10% advance online
   // and records the balance to be collected on delivery.
   const handlePlaceOrder = () => {
-    if (paymentMethod === "cod") {
-      processRazorpayPayment({ amountToCharge: advanceAmount, method: "cod" });
-    } else {
-      processRazorpayPayment({ amountToCharge: total, method: "razorpay" });
-    }
+    processRazorpayPayment(paymentMethod === "cod" ? "cod" : "razorpay");
   };
 
-  // Shared Razorpay flow. `amountToCharge` is what gets collected online now
-  // (full total for online orders, the 10% advance for COD). The order is saved
-  // in the DB only after this payment is verified.
-  const processRazorpayPayment = async ({
-    amountToCharge,
-    method,
-  }: {
-    amountToCharge: number;
-    method: "razorpay" | "cod";
-  }) => {
+  // Shared Razorpay flow. The server prices the bag, opens the Razorpay order
+  // for what is due now (full total, or the 10% COD advance) and records the
+  // order; paying it and verifying the signature confirms it.
+  const processRazorpayPayment = async (method: "razorpay" | "cod") => {
     if (!selectedAddressId) {
       showToast("Please select a shipping address.", "warning");
       return;
@@ -232,128 +248,88 @@ export default function CheckoutPage() {
       return;
     }
 
-    const token = getAuthToken();
-    if (!token) return;
-
+    const token = readToken();
+    if (!token) {
+      showToast("Please login to proceed.", "warning");
+      return;
+    }
+    const auth = { headers: { 'Authorization': `Bearer ${token}` } };
     const isCod = method === "cod";
 
     setIsPlacingOrder(true);
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, "") : 'http://localhost:5000';
-      const API_URL = `${baseUrl}/api`;
-
-      const { orderItems, orderShippingAddress } = buildOrderPayload();
-
-      // Full order details sent to /verify so the backend saves it once payment clears.
-      const buildVerifyBody = (rzp: { order_id: string; payment_id: string; signature: string }) => ({
-        razorpay_order_id: rzp.order_id,
-        razorpay_payment_id: rzp.payment_id,
-        razorpay_signature: rzp.signature,
-        items: orderItems,
-        shippingAddress: orderShippingAddress,
-        subtotal,
-        discount: 0,
-        shippingFee: shipping,
-        total,
+      const createOrderRes = await axios.post(`${API_V1}/payments/create-order`, {
+        items: cartItems.map((item) => ({ product: item.id, size: item.size, quantity: item.quantity })),
+        addressId: selectedAddressId,
         paymentMethod: method,
-        // For COD, record how much was paid now and how much is due on delivery.
-        advanceAmount: isCod ? advanceAmount : 0,
-        balanceAmount: isCod ? balanceAmount : 0,
-      });
+      }, auth);
 
-      // Create a Razorpay order for the amount collected now (no DB save yet).
-      const createOrderRes = await axios.post(`${API_URL}/v1/payments/create-order`, {
-        total: amountToCharge
-      }, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const { orderId, razorpayOrder, isMock, key_id, prefill, amounts } = createOrderRes.data.data;
 
-      if (!createOrderRes.data.success) {
-        showToast("Failed to create order.", "error");
+      // Never charge a different amount than the customer is looking at: if a
+      // price changed since the bag was loaded, show the new one first.
+      const shownNow = isCod ? advanceAmount : total;
+      if (Math.round(amounts.payableNow * 100) !== Math.round(shownNow * 100)) {
+        await refreshCart();
+        showToast("Prices in your bag have been updated. Please review the new total and place your order again.", "warning");
+        setIsPlacingOrder(false);
         return;
       }
 
-      const { razorpayOrder, isMock, key_id } = createOrderRes.data.data;
-
-      if (isMock) {
+      const verify = async (rzp: RazorpayResponse) => {
         setIsVerifyingPayment(true);
-        const verifyRes = await axios.post(
-          `${API_URL}/v1/payments/verify`,
-          buildVerifyBody({ order_id: razorpayOrder.id, payment_id: "mock_payment", signature: "mock_signature" }),
-          { headers: { 'Authorization': `Bearer ${token}` } }
-        );
-
-        if (verifyRes.data.success) {
-          clearCart();
-          window.location.href = "/order-success";
-        } else {
-          setIsVerifyingPayment(false);
-          window.location.href = "/order-failure";
+        try {
+          await axios.post(`${API_V1}/payments/verify`, rzp, auth);
+          // The server has emptied the saved bag; mirror that locally.
+          clearLocalCart();
+          router.push(`/order-success?id=${orderId}`);
+        } catch (err) {
+          console.error(err);
+          router.push("/order-failure");
         }
+      };
+
+      // Local development without Razorpay keys only; the server refuses this anywhere else.
+      if (isMock) {
+        await verify({ razorpay_order_id: razorpayOrder.id, razorpay_payment_id: "mock_payment", razorpay_signature: "mock" });
         return;
       }
 
       const isLoaded = await loadRazorpayScript();
-      if (!isLoaded) {
+      if (!isLoaded || !window.Razorpay) {
         showToast("Razorpay SDK failed to load. Are you online?", "error");
+        setIsPlacingOrder(false);
         return;
       }
 
-      const options = {
-        key: key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_YourTestKey", // Use backend key first to guarantee match
+      const rzp = new window.Razorpay({
+        key: key_id,
         amount: razorpayOrder.amount,
         currency: razorpayOrder.currency,
-        name: "Neokart",
+        name: "genesisbypreethy",
         description: isCod ? "Advance Payment (10%)" : "Order Payment",
         order_id: razorpayOrder.id,
-        handler: async function (response: any) {
-          setIsVerifyingPayment(true);
-          try {
-            const verifyRes = await axios.post(
-              `${API_URL}/v1/payments/verify`,
-              buildVerifyBody({
-                order_id: response.razorpay_order_id,
-                payment_id: response.razorpay_payment_id,
-                signature: response.razorpay_signature,
-              }),
-              { headers: { 'Authorization': `Bearer ${token}` } }
-            );
-
-            if (verifyRes.data.success) {
-              clearCart();
-              window.location.href = "/order-success";
-            } else {
-              setIsVerifyingPayment(false);
-              window.location.href = "/order-failure";
-            }
-          } catch (err) {
-            console.error(err);
-            setIsVerifyingPayment(false);
-            window.location.href = "/order-failure";
-          }
-        },
-        prefill: {
-          name: "Customer",
-          email: "neokart007@gmail.com",
-          contact: "9999999999"
-        },
+        handler: verify,
+        prefill,
         theme: {
           color: "#0a0a0a"
-        }
-      };
-
-      const rzp = new (window as any).Razorpay(options);
-      rzp.on('payment.failed', function (response: any) {
-        window.location.href = "/order-failure";
+        },
+        modal: {
+          // Closing the Razorpay window without paying hands the button back.
+          ondismiss: () => setIsPlacingOrder(false),
+        },
+      });
+      // Razorpay shows the failure and offers a retry inside its own window,
+      // so a failed attempt is not the end of the checkout.
+      rzp.on('payment.failed', (response) => {
+        console.warn("Razorpay payment attempt failed", response);
       });
       rzp.open();
-
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       setIsVerifyingPayment(false);
-      showToast(err.response?.data?.message || "An error occurred during checkout.", "error");
-    } finally {
       setIsPlacingOrder(false);
+      showToast(errorMessage(err, "An error occurred during checkout."), "error");
     }
   };
 
@@ -413,13 +389,15 @@ export default function CheckoutPage() {
                   </h2>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5" role="radiogroup" aria-label="Shipping address">
                   {addresses.map((addr) => {
                     const isSelected = selectedAddressId === addr.id;
                     return (
                       <button
                         key={addr.id}
                         onClick={() => setSelectedAddressId(addr.id)}
+                        role="radio"
+                        aria-checked={isSelected}
                         className={`relative text-left border p-6 transition-colors ${
                           isSelected
                             ? "border-ink bg-cream"
@@ -451,7 +429,7 @@ export default function CheckoutPage() {
                     onClick={() => setIsAddressModalOpen(true)}
                     className="border border-dashed border-line p-6 min-h-[120px] flex flex-col items-center justify-center gap-2 text-muted hover:border-ink/40 hover:text-ink transition-colors"
                   >
-                    <span className="text-2xl font-light leading-none">+</span>
+                    <span className="text-2xl font-light leading-none" aria-hidden="true">+</span>
                     <span className="eyebrow">New Address</span>
                   </button>
                 </div>
@@ -560,8 +538,9 @@ export default function CheckoutPage() {
                     <p className="font-sans text-sm text-muted">Your order bag is empty.</p>
                   ) : (
                     cartItems.map((item) => (
-                      <div key={item.id} className="flex gap-4">
+                      <div key={`${item.id}-${item.size ?? ""}`} className="flex gap-4">
                         <div className="relative w-14 aspect-[4/5] bg-sand overflow-hidden flex-shrink-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element -- tiny Cloudinary-resized thumbnail */}
                           <img
                             src={cldOptimize(item.image, 160)}
                             alt={item.name}
@@ -642,12 +621,17 @@ export default function CheckoutPage() {
             className="absolute inset-0 bg-ink/30 backdrop-blur-sm"
             onClick={() => setIsAddressModalOpen(false)}
           />
-          <div className="relative bg-ivory border border-line w-full max-w-lg shadow-xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="new-address-title"
+            className="relative bg-ivory border border-line w-full max-w-lg shadow-xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+          >
             {/* Header */}
             <div className="flex items-center justify-between p-6 sm:p-8 border-b border-line">
               <div>
                 <p className="eyebrow text-bronze-deep mb-2">Shipping</p>
-                <h2 className="font-display font-light text-2xl text-ink">
+                <h2 id="new-address-title" className="font-display font-light text-2xl text-ink">
                   New Address
                 </h2>
               </div>
@@ -663,12 +647,16 @@ export default function CheckoutPage() {
             {/* Form */}
             <div className="p-6 sm:p-8 flex flex-col gap-5">
               <div>
-                <label className="block font-sans text-[11px] uppercase tracking-[0.14em] text-muted mb-2">Street Address</label>
+                <label htmlFor="checkout-street" className="block font-sans text-[11px] uppercase tracking-[0.14em] text-muted mb-2">Street Address</label>
                 <input
+                  id="checkout-street"
                   type="text"
+                  autoFocus
+                  autoComplete="street-address"
                   value={newAddressForm.street}
                   onChange={(e) => { setNewAddressForm({ ...newAddressForm, street: e.target.value }); setAddressErrors(prev => ({ ...prev, street: '' })); }}
                   placeholder="e.g. 123 Marine Drive"
+                  aria-invalid={!!addressErrors.street}
                   className={`w-full bg-cream border rounded-none px-4 py-3 font-sans text-base text-ink focus:outline-none focus:border-ink placeholder:text-faint ${addressErrors.street ? 'border-red-400' : 'border-line'}`}
                 />
                 {addressErrors.street && <p className="text-red-500 text-xs mt-1.5">{addressErrors.street}</p>}
@@ -676,23 +664,29 @@ export default function CheckoutPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block font-sans text-[11px] uppercase tracking-[0.14em] text-muted mb-2">City <span className="text-red-500">*</span></label>
+                  <label htmlFor="checkout-city" className="block font-sans text-[11px] uppercase tracking-[0.14em] text-muted mb-2">City <span className="text-red-500">*</span></label>
                   <input
+                    id="checkout-city"
                     type="text"
+                    autoComplete="address-level2"
                     value={newAddressForm.city}
                     onChange={(e) => { setNewAddressForm({ ...newAddressForm, city: e.target.value }); setAddressErrors(prev => ({ ...prev, city: '' })); }}
                     placeholder="Kochi"
+                    aria-invalid={!!addressErrors.city}
                     className={`w-full bg-cream border rounded-none px-4 py-3 font-sans text-base text-ink focus:outline-none focus:border-ink placeholder:text-faint ${addressErrors.city ? 'border-red-400' : 'border-line'}`}
                   />
                   {addressErrors.city && <p className="text-red-500 text-xs mt-1.5">{addressErrors.city}</p>}
                 </div>
                 <div>
-                  <label className="block font-sans text-[11px] uppercase tracking-[0.14em] text-muted mb-2">State <span className="text-red-500">*</span></label>
+                  <label htmlFor="checkout-state" className="block font-sans text-[11px] uppercase tracking-[0.14em] text-muted mb-2">State <span className="text-red-500">*</span></label>
                   <input
+                    id="checkout-state"
                     type="text"
+                    autoComplete="address-level1"
                     value={newAddressForm.state}
                     onChange={(e) => { setNewAddressForm({ ...newAddressForm, state: e.target.value }); setAddressErrors(prev => ({ ...prev, state: '' })); }}
                     placeholder="Kerala"
+                    aria-invalid={!!addressErrors.state}
                     className={`w-full bg-cream border rounded-none px-4 py-3 font-sans text-base text-ink focus:outline-none focus:border-ink placeholder:text-faint ${addressErrors.state ? 'border-red-400' : 'border-line'}`}
                   />
                   {addressErrors.state && <p className="text-red-500 text-xs mt-1.5">{addressErrors.state}</p>}
@@ -701,20 +695,26 @@ export default function CheckoutPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block font-sans text-[11px] uppercase tracking-[0.14em] text-muted mb-2">PIN Code <span className="text-red-500">*</span></label>
+                  <label htmlFor="checkout-zip" className="block font-sans text-[11px] uppercase tracking-[0.14em] text-muted mb-2">PIN Code <span className="text-red-500">*</span></label>
                   <input
+                    id="checkout-zip"
                     type="text"
+                    inputMode="numeric"
+                    autoComplete="postal-code"
                     value={newAddressForm.zip}
                     onChange={(e) => { setNewAddressForm({ ...newAddressForm, zip: e.target.value }); setAddressErrors(prev => ({ ...prev, zip: '' })); }}
                     placeholder="682001"
+                    aria-invalid={!!addressErrors.zip}
                     className={`w-full bg-cream border rounded-none px-4 py-3 font-sans text-base text-ink focus:outline-none focus:border-ink placeholder:text-faint ${addressErrors.zip ? 'border-red-400' : 'border-line'}`}
                   />
                   {addressErrors.zip && <p className="text-red-500 text-xs mt-1.5">{addressErrors.zip}</p>}
                 </div>
                 <div>
-                  <label className="block font-sans text-[11px] uppercase tracking-[0.14em] text-muted mb-2">Country</label>
+                  <label htmlFor="checkout-country" className="block font-sans text-[11px] uppercase tracking-[0.14em] text-muted mb-2">Country</label>
                   <input
+                    id="checkout-country"
                     type="text"
+                    autoComplete="country-name"
                     value={newAddressForm.country}
                     onChange={(e) => setNewAddressForm({ ...newAddressForm, country: e.target.value })}
                     placeholder="India"

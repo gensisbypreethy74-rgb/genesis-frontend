@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion, type HTMLMotionProps } from "framer-motion";
+import { motion, type HTMLMotionProps } from "framer-motion";
 import type { ReactNode } from "react";
 
 interface RevealProps extends Omit<HTMLMotionProps<"div">, "children"> {
@@ -18,7 +18,11 @@ interface RevealProps extends Omit<HTMLMotionProps<"div">, "children"> {
 
 /**
  * Scroll-reveal wrapper used site-wide: fade + slight upward translate (and an
- * optional subtle scale for image tiles). Honours prefers-reduced-motion.
+ * optional subtle scale for image tiles). Honours prefers-reduced-motion via
+ * the root `<MotionConfig reducedMotion="user">`: the movement is dropped and
+ * only the fade remains. Always a motion.div — swapping in a plain div for
+ * reduced motion made the client's markup differ from the server's, leaving the
+ * server-rendered `opacity: 0` in place.
  */
 export default function Reveal({
   children,
@@ -29,14 +33,6 @@ export default function Reveal({
   className,
   ...rest
 }: RevealProps) {
-  const reduce = useReducedMotion();
-
-  if (reduce) {
-    return (
-      <div className={className}>{children}</div>
-    );
-  }
-
   return (
     <motion.div
       className={className}

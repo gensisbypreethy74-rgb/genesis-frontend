@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import ProductBrowser from "../../../components/shop/ProductBrowser";
+
+export const metadata: Metadata = { title: "Within" };
 
 export default function WithinPage() {
   return (

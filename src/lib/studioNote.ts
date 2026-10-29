@@ -1,3 +1,5 @@
+import { API_V1 } from "./api";
+
 export interface StudioNote {
   eyebrow: string;
   heading: string;
@@ -9,8 +11,7 @@ export interface StudioNote {
 /** Fetch the editable Studio Notes block. null on failure → component uses defaults. */
 export async function fetchStudioNote(): Promise<StudioNote | null> {
   try {
-    const base = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/api\/?$/, "");
-    const res = await fetch(`${base}/api/v1/studio-note`, { cache: "no-store" });
+    const res = await fetch(`${API_V1}/studio-note`, { next: { revalidate: 60 } });
     if (!res.ok) return null;
     return (await res.json())?.data ?? null;
   } catch {

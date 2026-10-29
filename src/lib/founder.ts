@@ -1,3 +1,5 @@
+import { API_V1 } from "./api";
+
 export interface FounderNote {
   eyebrow: string;
   heading: string;
@@ -10,8 +12,7 @@ export interface FounderNote {
 /** Fetch the editable Founder's Note. null on failure → component uses its defaults. */
 export async function fetchFounderNote(): Promise<FounderNote | null> {
   try {
-    const base = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/api\/?$/, "");
-    const res = await fetch(`${base}/api/v1/founder-note`, { cache: "no-store" });
+    const res = await fetch(`${API_V1}/founder-note`, { next: { revalidate: 60 } });
     if (!res.ok) return null;
     return (await res.json())?.data ?? null;
   } catch {

@@ -1,8 +1,5 @@
-// Backend origin (strip a trailing /api) — where locally-uploaded /uploads/* live.
-const BACKEND_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(
-  /\/api\/?$/,
-  ""
-);
+// The backend origin is where locally-uploaded /uploads/* live.
+import { API_ORIGIN } from "./api";
 
 /**
  * Resolve any stored image reference to a browser-loadable URL.
@@ -18,7 +15,7 @@ const BACKEND_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:500
  */
 export function resolveImageUrl(url?: string | null): string {
   if (!url) return "";
-  if (url.startsWith("/uploads/")) return `${BACKEND_ORIGIN}${url}`;
+  if (url.startsWith("/uploads/")) return `${API_ORIGIN}${url}`;
   return url;
 }
 

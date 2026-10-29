@@ -75,7 +75,7 @@ export default function ValueSection() {
                 }`}
               style={{ transitionDelay: "500ms" }}
             >
-              At NEOKART, we don&apos;t just create products. We create experiences that elevate your everyday lifestyle.
+              At Genesisbyprethy, we don&apos;t just create products. We create experiences that elevate your everyday lifestyle.
             </p>
 
             {/* Feature Grid */}

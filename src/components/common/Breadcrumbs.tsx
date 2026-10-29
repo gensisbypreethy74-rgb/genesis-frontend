@@ -56,6 +56,9 @@ const EXTRA_ANCESTORS: Record<string, { href: string; label: string }[]> = {
   "/checkout": [{ href: "/cart", label: "Bag" }],
 };
 
+/** Intermediate paths with no page of their own: shown as text, not linked. */
+const NO_PAGE = new Set(["/collections"]);
+
 function labelForSegment(segment: string): string {
   return (
     LABELS[segment] ??
@@ -115,6 +118,8 @@ export default function Breadcrumbs({
             <span aria-current="page" className="text-muted truncate max-w-[60vw] sm:max-w-none">
               {crumb.label}
             </span>
+          ) : NO_PAGE.has(crumb.href) ? (
+            <span className="whitespace-nowrap">{crumb.label}</span>
           ) : (
             <Link href={crumb.href} className={linkClass}>
               {crumb.label}

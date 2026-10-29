@@ -10,6 +10,7 @@ import { Button } from "../ui/Button";
 import Breadcrumbs from "../common/Breadcrumbs";
 import { type Product, fromPrice } from "../../lib/product";
 import { slugify, FIXED_CATEGORIES } from "../../lib/categories";
+import { API_V1 } from "../../lib/api";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -162,43 +163,40 @@ function BrowserContent({ scope, heading }: ProductBrowserProps) {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL
-          ? process.env.NEXT_PUBLIC_API_URL.replace("/api", "")
-          : "http://localhost:5000";
-
         const [prodRes, catRes] = await Promise.all([
-          axios.get(`${baseUrl}/api/v1/products`),
-          axios.get(`${baseUrl}/api/v1/categories`),
+          axios.get(`${API_V1}/products`),
+          axios.get(`${API_V1}/categories`),
         ]);
 
         const prodJson = prodRes.data;
         const catJson = catRes.data;
 
-        const activeBackendCats =
+        const activeBackendCats: { name: string }[] =
           catJson?.success && Array.isArray(catJson.data)
-            ? catJson.data.filter((c: any) => c.status === "ACTIVE")
+            ? catJson.data.filter((c: { status?: string }) => c.status === "ACTIVE")
             : [];
 
         setCategories(
-          activeBackendCats.map((c: any) => ({ id: slugify(c.name), label: c.name }))
+          activeBackendCats.map((c) => ({ id: slugify(c.name), label: c.name }))
         );
 
         if (prodJson?.success && Array.isArray(prodJson.data)) {
-          const activeCatNames = activeBackendCats.map((c: any) => c.name.toLowerCase());
+          const all: Product[] = prodJson.data;
+          const activeCatNames = activeBackendCats.map((c) => c.name.toLowerCase());
           // Fixed categories (the Edit sections, The Moment) aren't Category
           // docs, so allow them through the active-category visibility gate too.
           const allowed = [...activeCatNames, ...FIXED_CATEGORIES];
           const visibleProducts =
             activeCatNames.length > 0
-              ? prodJson.data.filter((p: any) =>
-                  allowed.includes((p.category || "").toLowerCase())
-                )
-              : prodJson.data;
+              ? all.filter((p) => allowed.includes((p.category || "").toLowerCase()))
+              : all;
 
-          const mappedProds: Product[] = visibleProducts.map((p: any) => ({
+          const mappedProds: Product[] = visibleProducts.map((p) => ({
             _id: p._id,
             name: p.name,
-            images: p.images && p.images.length > 0 ? p.images : ["/products/suncream-1.jpg"],
+            // No product-level photos: ProductCard falls back to the variants'
+            // images, then to its placeholder.
+            images: p.images || [],
             variants: p.variants,
             offerText: p.offerText || "",
             category: p.category || "",
@@ -235,24 +233,25 @@ function BrowserContent({ scope, heading }: ProductBrowserProps) {
     };
     const key = KEY[scope.sectionSlugs[0]];
     if (!key) return;
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL
-      ? process.env.NEXT_PUBLIC_API_URL.replace("/api", "")
-      : "http://localhost:5000";
     axios
-      .get(`${baseUrl}/api/v1/edit-sections`)
+      .get(`${API_V1}/edit-sections`)
       .then((r) => {
         if (r.data?.success) setEditDesc(r.data.data[key] ?? "");
       })
       .catch(() => {});
   }, [scope]);
 
-  // Sync category/search from URL
-  useEffect(() => {
+  // Sync category/search from the URL whenever it changes (the header's live
+  // search rewrites ?search= as you type). Done during render, not in an
+  // effect, so the filtered grid never paints one frame behind the URL.
+  const [syncedParams, setSyncedParams] = useState(searchParams);
+  if (searchParams !== syncedParams) {
+    setSyncedParams(searchParams);
     const category = searchParams.get("category");
     if (category) setSelectedCategories([category]);
     const search = searchParams.get("search");
     setSearchTerm(search !== null ? search : "");
-  }, [searchParams]);
+  }
 
   // Scope to this edit section (if any). Everything downstream — counts,
   // filtering, sort — runs over the scoped set, so an edit page behaves exactly

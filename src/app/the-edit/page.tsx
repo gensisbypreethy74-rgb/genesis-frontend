@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Reveal from "../../components/ui/Reveal";
 import EditorialImage from "../../components/ui/EditorialImage";
 import { ButtonLink } from "../../components/ui/Button";
 import CategoryTiles from "./_components/CategoryTiles";
 import Breadcrumbs from "../../components/common/Breadcrumbs";
+
+export const metadata: Metadata = { title: "The Edit" };
 
 const COLLECTIONS = [
   {

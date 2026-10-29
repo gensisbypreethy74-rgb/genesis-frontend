@@ -1,11 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "../../context/CartContext";
+import { API_V1 } from "../../lib/api";
 import Logo from "../ui/Logo";
+
+/**
+ * Signed-in state, read from localStorage on every render. The server (and
+ * hydration) always sees "signed out"; nothing to subscribe to, because the
+ * header re-renders on every navigation, which is when sign-in/out happens.
+ */
+const subscribeNever = () => () => {};
+const readLoggedIn = () => !!localStorage.getItem("heedy_user");
+const serverLoggedIn = () => false;
 
 /* ── Navigation model ─────────────────────────────────────────────────────────
    Single-page site: the three nav items scroll to sections on the Home page.
@@ -38,18 +48,19 @@ function Wordmark() {
 }
 
 /* Minimal line icons (used only for the mobile menu / search glyphs) */
+type IconProps = React.SVGProps<SVGSVGElement>;
 const Ic = {
-  search: (p: any) => (
+  search: (p: IconProps) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...p}>
       <circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" />
     </svg>
   ),
-  menu: (p: any) => (
+  menu: (p: IconProps) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" {...p}>
       <path d="M3 6h18M3 12h18M3 18h18" />
     </svg>
   ),
-  close: (p: any) => (
+  close: (p: IconProps) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" {...p}>
       <path d="M18 6 6 18M6 6l12 12" />
     </svg>
@@ -60,14 +71,25 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const isLoggedIn = useSyncExternalStore(subscribeNever, readLoggedIn, serverLoggedIn);
   const [query, setQuery] = useState("");
   const [editOpen, setEditOpen] = useState(false); // desktop dropdown
   const [mobileEditOpen, setMobileEditOpen] = useState(false);
+  const editTriggerRef = useRef<HTMLAnchorElement>(null);
 
   const { cartCount, clearLocalCart } = useCart();
   const pathname = usePathname();
   const router = useRouter();
+
+  // Close the drawer on navigation. Typing from any other page lands on
+  // /products mid-word — closing the search there would eat the query, so it
+  // only closes when leaving the results.
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
+    setMobileOpen(false);
+    if (pathname !== "/products") setSearchOpen(false);
+  }
 
   // The Home page renders a full-bleed hero behind a transparent header.
   const hasHero = pathname === "/";
@@ -80,14 +102,6 @@ export default function Navbar() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  useEffect(() => {
-    setIsLoggedIn(!!localStorage.getItem("heedy_user"));
-    setMobileOpen(false);
-    // Typing from any other page lands on /products mid-word — closing the
-    // drawer there would eat the query. Only close when leaving the results.
-    if (pathname !== "/products") setSearchOpen(false);
-  }, [pathname]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -107,8 +121,19 @@ export default function Navbar() {
   }, [mobileOpen]);
 
   const handleLogout = () => {
+    // Revoke the session on the server first — best-effort, never blocking.
+    try {
+      const token = JSON.parse(localStorage.getItem("heedy_user") || "{}").token;
+      if (token) {
+        fetch(`${API_V1}/auth/logout`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => {});
+      }
+    } catch {
+      // Unreadable session: nothing to revoke.
+    }
     localStorage.removeItem("heedy_user");
-    setIsLoggedIn(false);
     clearLocalCart();
     setMobileOpen(false);
     router.push("/sign-in");
@@ -194,23 +219,46 @@ export default function Navbar() {
                 item.id === "the-edit" ? (
                   <div
                     key={item.id}
-                    className="relative"
+                    className="relative flex items-center gap-1.5"
                     onMouseEnter={() => setEditOpen(true)}
                     onMouseLeave={() => setEditOpen(false)}
+                    // Keyboard: focusing the link opens the menu, focus leaving
+                    // the whole group closes it, Escape closes it from anywhere inside.
+                    onBlur={(e) => {
+                      if (!e.currentTarget.contains(e.relatedTarget)) setEditOpen(false);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape" && editOpen) {
+                        setEditOpen(false);
+                        editTriggerRef.current?.focus();
+                      }
+                    }}
                   >
                     <Link
+                      ref={editTriggerRef}
                       href={sectionHref(item.id)}
                       onClick={(e) => goToSection(e, item.id)}
-                      className={`eyebrow ${linkColor} hover:opacity-60 transition-opacity flex items-center gap-1.5`}
-                      aria-haspopup="true"
-                      aria-expanded={editOpen}
+                      onFocus={() => setEditOpen(true)}
+                      className={`eyebrow ${linkColor} hover:opacity-60 transition-opacity`}
                     >
                       {item.label}
-                      <span className={`text-[8px] transition-transform duration-300 ${editOpen ? "rotate-180" : ""}`}>▾</span>
                     </Link>
+                    {/* The link keeps scrolling to the section; this toggles the
+                        sub-page menu for click, tap, Enter and Space. */}
+                    <button
+                      type="button"
+                      onClick={() => setEditOpen((v) => !v)}
+                      aria-expanded={editOpen}
+                      aria-controls="edit-subpages"
+                      aria-label={`${item.label} pages`}
+                      className={`${linkColor} hover:opacity-60 transition-opacity`}
+                    >
+                      <span aria-hidden className={`block text-[8px] transition-transform duration-300 ${editOpen ? "rotate-180" : ""}`}>▾</span>
+                    </button>
                     <AnimatePresence>
                       {editOpen && (
                         <motion.div
+                          id="edit-subpages"
                           initial={{ opacity: 0, y: 6 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: 6 }}

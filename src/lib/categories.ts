@@ -1,5 +1,6 @@
 import axios from "axios";
 import { MOMENT_CATEGORY } from "./product";
+import { API_V1 } from "./api";
 
 /**
  * Categories, as the storefront consumes them.
@@ -17,12 +18,6 @@ export interface StoreCategory {
   /** Stored reference; pass through `cldOptimize` before rendering. */
   image: string;
 }
-
-/** Backend origin, tolerating a NEXT_PUBLIC_API_URL that includes `/api`. */
-const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(
-  /\/api\/?$/,
-  ""
-);
 
 /**
  * Lowercase; collapse spaces, ampersands and slashes to single hyphens.
@@ -70,7 +65,7 @@ interface ApiCategory {
  * load. Throws on failure so callers can decide what to show.
  */
 export async function fetchActiveCategories(): Promise<StoreCategory[]> {
-  const res = await axios.get(`${API_ORIGIN}/api/v1/categories`);
+  const res = await axios.get(`${API_V1}/categories`);
   if (!res.data?.success || !Array.isArray(res.data.data)) return [];
 
   return (res.data.data as ApiCategory[])

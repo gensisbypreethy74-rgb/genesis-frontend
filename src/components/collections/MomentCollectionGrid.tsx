@@ -7,8 +7,8 @@ import Reveal from "../ui/Reveal";
 import ProductCard from "../ui/ProductCard";
 import { isMoment, type Product } from "../../lib/product";
 import { fetchMoment } from "../../lib/moment";
-
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/api\/?$/, "");
+import { API_V1 } from "../../lib/api";
+import { safeHref } from "../../lib/safeHref";
 
 /**
  * The Moment as a product grid — the same set as the homepage carousel, since
@@ -29,7 +29,7 @@ export default function MomentCollectionGrid() {
 
   useEffect(() => {
     Promise.all([
-      axios.get(`${API_BASE}/api/v1/products`).then((r) => (r.data?.data as Product[]) || []),
+      axios.get(`${API_V1}/products`).then((r) => (r.data?.data as Product[]) || []),
       fetchMoment(),
     ])
       .then(([all, moment]) => {
@@ -46,7 +46,7 @@ export default function MomentCollectionGrid() {
           href === "/products" ||
           href.startsWith("/products?collection=") ||
           href.startsWith("/collections/");
-        setCtaHref(needsFix ? "/products?category=the-moment" : href);
+        setCtaHref(needsFix ? "/products?category=the-moment" : safeHref(href, "/products?category=the-moment"));
       })
       .catch(() => {})
       .finally(() => setLoading(false));

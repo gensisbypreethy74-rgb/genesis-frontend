@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import type { Moment } from "../../lib/moment";
 
 const ease = [0.16, 1, 0.3, 1] as const;
@@ -24,8 +24,7 @@ const STEPS = [
 ];
 
 export default function MomentExplainer({ moment }: { moment?: Moment | null }) {
-  const reduce = useReducedMotion();
-  const steps = moment?.steps?.length ? moment.steps : STEPS;
+  const steps =moment?.steps?.length ? moment.steps : STEPS;
   const label = moment?.explainerEyebrow ?? "HOW A GENESIS MOMENT WORKS";
 
   return (
@@ -33,8 +32,8 @@ export default function MomentExplainer({ moment }: { moment?: Moment | null }) 
       <div className="max-w-[1200px] mx-auto px-6 sm:px-10 lg:px-16">
         {/* Section Label */}
         <motion.p
-          initial={reduce ? {} : { opacity: 0, y: 10 }}
-          whileInView={reduce ? {} : { opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "0px 0px -10% 0px" }}
           transition={{ duration: 0.6, ease }}
           className="text-center eyebrow text-[#9A8F84] mb-[28px] sm:mb-[28px] md:mb-[36px]"
@@ -47,8 +46,8 @@ export default function MomentExplainer({ moment }: { moment?: Moment | null }) 
           {steps.map((step, idx) => (
             <motion.div
               key={step.number}
-              initial={reduce ? {} : { opacity: 0, y: 15 }}
-              whileInView={reduce ? {} : { opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: 15 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "0px 0px -10% 0px" }}
               transition={{
                 duration: 0.5,

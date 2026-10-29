@@ -1,4 +1,5 @@
 import React from "react";
+import { API_V1 } from "./api";
 
 export type StorySectionType =
   | "hero"
@@ -49,17 +50,13 @@ export interface StoryPayload {
   settings: StorySettings;
 }
 
-/** Backend origin without the trailing /api, matching the rest of the storefront. */
-export function apiBase(): string {
-  return (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/api\/?$/, "");
-}
-
-/** Fetch the published Story feed. Returns null on any failure (caller falls back). */
-export async function fetchStory(opts?: { noStore?: boolean }): Promise<StoryPayload | null> {
+/**
+ * Fetch the published Story feed. Returns null on any failure (caller falls
+ * back). Cached for a minute, so studio edits show up within that window.
+ */
+export async function fetchStory(): Promise<StoryPayload | null> {
   try {
-    const res = await fetch(`${apiBase()}/api/v1/story`, {
-      cache: opts?.noStore ? "no-store" : "default",
-    });
+    const res = await fetch(`${API_V1}/story`, { next: { revalidate: 60 } });
     if (!res.ok) return null;
     const json = await res.json();
     const data = json?.data;

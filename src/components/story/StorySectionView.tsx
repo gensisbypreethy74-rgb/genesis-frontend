@@ -1,11 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import EditorialImage from "../ui/EditorialImage";
 import { type StorySection, renderRichText } from "../../lib/story";
+import { safeHref } from "../../lib/safeHref";
 
 const ease = [0.16, 1, 0.3, 1] as const;
+
+// Same markup on server and client; reduced motion is handled by the root
+// MotionConfig, which drops the rise and keeps the fade.
+const rise = { initial: { opacity: 0, y: 30 }, whileInView: { opacity: 1, y: 0 } };
+const viewport = { once: true, margin: "0px 0px -12% 0px" };
 
 function CtaLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
@@ -31,13 +37,10 @@ function sectionImageAlt(s: StorySection): string {
 
 /** Renders a single Story section by its type, in the storefront's editorial language. */
 export default function StorySectionView({ section: s }: { section: StorySection }) {
-  const reduce = useReducedMotion();
-  const rise = reduce
-    ? {}
-    : { initial: { opacity: 0, y: 30 }, whileInView: { opacity: 1, y: 0 } };
-  const viewport = { once: true, margin: "0px 0px -12% 0px" };
   const body = renderRichText(s.body);
-  const hasCta = s.ctaLabel && s.ctaHref;
+  // A link the studio mistyped is dropped rather than rendered.
+  const ctaHref = safeHref(s.ctaHref, "");
+  const hasCta = s.ctaLabel && ctaHref;
 
   // ── QUOTE ──────────────────────────────────────────────────────────────────
   if (s.type === "quote") {
@@ -78,7 +81,7 @@ export default function StorySectionView({ section: s }: { section: StorySection
             {hasCta && (
               <div className="shrink-0">
                 <Link
-                  href={s.ctaHref!}
+                  href={ctaHref}
                   className="inline-block w-full md:w-auto text-center bg-ink text-cream eyebrow px-7 py-4 hover:bg-[#33302a] transition-colors"
                 >
                   {s.ctaLabel}
@@ -211,15 +214,14 @@ export default function StorySectionView({ section: s }: { section: StorySection
             )}
             {hasCta && (
               <div className="mt-8">
-                <CtaLink href={s.ctaHref!}>{s.ctaLabel}</CtaLink>
+                <CtaLink href={ctaHref}>{s.ctaLabel}</CtaLink>
               </div>
             )}
           </motion.div>
 
           {/* Image */}
           <motion.div
-            initial={reduce ? {} : { opacity: 0, y: 30 }}
-            whileInView={reduce ? {} : { opacity: 1, y: 0 }}
+            {...rise}
             viewport={viewport}
             transition={{ duration: 0.9, ease, delay: 0.1 }}
             className={`group ${imageLeft ? "order-1 lg:order-1" : "order-1 lg:order-2"}`}

@@ -1,4 +1,5 @@
 // Shared product shape + helpers for the storefront.
+import { API_V1 } from "./api";
 
 export interface Variant {
   volume?: string;
@@ -29,19 +30,6 @@ export interface SizeChartGroup {
   title: string;
   rows: SizeChartRow[];
 }
-
-/**
- * House-wide default specification table — shown on a piece that has no specs of
- * its own, so every product carries the section until the studio customises it.
- */
-export const DEFAULT_SPECS: { label: string; value: string }[] = [
-  { label: "Neck", value: "15 in" },
-  { label: "Shoulder", value: "16 in" },
-  { label: "Bust", value: "38 in" },
-  { label: "Waist", value: "32 in" },
-  { label: "Hip", value: "40 in" },
-  { label: "Total Length", value: "44 in" },
-];
 
 /**
  * House-wide default size charts (centimetres) — shown on the general Size Guide
@@ -84,6 +72,7 @@ export interface Product {
   sizeChart?: SizeChartRow[]; // legacy single chart
   sizeCharts?: SizeChartGroup[]; // named charts, e.g. "Top & Dresses", "Bottom"
   description?: string;
+  tagline?: string;
   keyFeatures?: string;
   variants?: Variant[];
   images?: string[];
@@ -109,19 +98,17 @@ export function isMoment(p: Product): boolean {
 }
 
 /**
- * One product by id, fetched server-side. Returns null on a 404, a bad id, or
- * an unreachable backend — every caller renders a fallback rather than an
- * error page, because a missing size chart should never take a page down.
+ * One product by id. Returns null on a 404, a bad id, or an unreachable
+ * backend — every caller renders a fallback rather than an error page, because
+ * a missing size chart should never take a page down.
+ *
+ * Server callers (metadata, size guide) share a one-minute cache; in the
+ * browser the `next` option is ignored and this is a plain request.
  */
 export async function fetchProductById(id: string): Promise<Product | null> {
-  const origin = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(
-    /\/api\/?$/,
-    ""
-  );
   try {
-    // Studio edits must show up immediately; this page is never prerendered.
-    const res = await fetch(`${origin}/api/v1/products/${encodeURIComponent(id)}`, {
-      cache: "no-store",
+    const res = await fetch(`${API_V1}/products/${encodeURIComponent(id)}`, {
+      next: { revalidate: 60 },
     });
     if (!res.ok) return null;
     const json = await res.json();

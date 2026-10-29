@@ -38,3 +38,9 @@ export const COMPANY = {
 
 /** Customer care address, already used across the policy pages. */
 export const CARE_EMAIL = "care@genesisbypreethy.com";
+
+/**
+ * Public storefront origin, no trailing slash: metadataBase, canonical product
+ * URLs, the sitemap and structured data all build on it.
+ */
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://genesisbypreethy.com").replace(/\/+$/, "");

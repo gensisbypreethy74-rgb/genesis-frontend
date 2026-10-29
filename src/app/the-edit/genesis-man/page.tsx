@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import ProductBrowser from "../../../components/shop/ProductBrowser";
+
+export const metadata: Metadata = { title: "Genesis Men" };
 
 export default function GenesisManPage() {
   // Section-only match (no life modes), so women's Ambition/Occasion pieces

@@ -51,7 +51,9 @@ export default function Accordion({ title, children, defaultOpen = false }: Acco
           open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
         }`}
       >
-        <div className="overflow-hidden">
+        {/* `inert` keeps a collapsed panel's links out of the tab order and
+            away from screen readers while it still animates shut. */}
+        <div className="overflow-hidden" inert={!open}>
           <div
             id={panelId}
             role="region"

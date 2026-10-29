@@ -8,8 +8,8 @@ import logoBronze from "../../../public/images/logo-wordmark.png";
  * dark grounds (hero) and ivory/cream grounds (drawer, footer) alike. The old
  * soft-black `ink` variant is retired.
  *
- * Trimmed from `public/images/Logo.png`, whose 1080×1080 canvas is 84% empty
- * padding — sizing that original by height would render the mark tiny.
+ * Trimmed from the original 1080×1080 `Logo.png` (in git history), whose
+ * canvas is 84% empty padding — sizing that by height rendered the mark tiny.
  */
 export default function Logo({
   className = "",

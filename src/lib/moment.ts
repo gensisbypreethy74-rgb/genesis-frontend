@@ -1,3 +1,5 @@
+import { API_V1 } from "./api";
+
 export interface MomentStep {
   number: string;
   title: string;
@@ -30,8 +32,7 @@ export interface Moment {
 /** Fetch the editable Moment section. null on failure → components use their defaults. */
 export async function fetchMoment(): Promise<Moment | null> {
   try {
-    const base = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/api\/?$/, "");
-    const res = await fetch(`${base}/api/v1/moment`, { cache: "no-store" });
+    const res = await fetch(`${API_V1}/moment`, { next: { revalidate: 60 } });
     if (!res.ok) return null;
     return (await res.json())?.data ?? null;
   } catch {

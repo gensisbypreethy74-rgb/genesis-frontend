@@ -23,9 +23,11 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 
   return product
     ? {
+        title: `Size Guide — ${product.name}`,
         description: `Body measurements and fit notes for ${product.name}.`,
       }
     : {
+        title: "Size Guide",
         description:
           "How to measure, and the fit notes behind every Genesis by Preethy piece.",
       };

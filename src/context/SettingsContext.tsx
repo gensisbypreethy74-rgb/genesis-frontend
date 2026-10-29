@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import axios from "axios";
+import { API_V1 } from "../lib/api";
 
 interface SiteSettings {
   whatsappNumber: string;
@@ -19,11 +20,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL
-          ? process.env.NEXT_PUBLIC_API_URL.replace("/api", "")
-          : "http://localhost:5000";
-
-        const res = await axios.get(`${baseUrl}/api/v1/site-settings`, { params: { t: Date.now() } });
+        const res = await axios.get(`${API_V1}/site-settings`, { params: { t: Date.now() } });
         if (res.data?.success && res.data?.data) {
           setSettings(res.data.data);
         }

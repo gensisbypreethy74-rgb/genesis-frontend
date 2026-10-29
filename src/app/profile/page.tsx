@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useEffectEvent, useRef } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { X } from "lucide-react";
@@ -9,6 +9,8 @@ import { useCart } from "../../context/CartContext";
 import { Button } from "../../components/ui/Button";
 import Reveal from "../../components/ui/Reveal";
 import Breadcrumbs from "../../components/common/Breadcrumbs";
+import { API_V1 } from "../../lib/api";
+import { cldOptimize } from "../../lib/image";
 
 interface UserProfile {
   name: string;
@@ -18,15 +20,101 @@ interface UserProfile {
   phone?: string;
 }
 
+interface Address {
+  _id: string;
+  street?: string;
+  apartment?: string;
+  landmark?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
+}
+
+interface OrderItem {
+  /** Populated product; null once the piece is deleted. */
+  product?: { name?: string; images?: string[] } | null;
+  /** Snapshots taken at purchase. Older orders may lack name/image. */
+  name?: string;
+  image?: string;
+  size?: string;
+  quantity: number;
+  price: number;
+}
+
+interface Order {
+  _id: string;
+  createdAt: string;
+  total: number;
+  orderStatus: string;
+  items: OrderItem[];
+}
+
+/** The API's own message for a failed request, else `fallback`. */
+const apiError = (err: unknown, fallback: string): string =>
+  (axios.isAxiosError(err) && err.response?.data?.message) || fallback;
+
+const isUnauthorized = (err: unknown) =>
+  axios.isAxiosError(err) && err.response?.status === 401;
+
+/**
+ * Overlay + panel for the account modals: a labelled dialog that takes focus
+ * when it opens, closes on Escape, and hands focus back to whatever opened it.
+ */
+function Modal({
+  titleId,
+  onClose,
+  className,
+  children,
+}: {
+  titleId: string;
+  onClose: () => void;
+  className: string;
+  children: React.ReactNode;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const close = useEffectEvent(onClose);
+
+  useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const panel = panelRef.current;
+    // First field if there is one, else the first button (Cancel on the confirm).
+    (panel?.querySelector<HTMLElement>("input") ?? panel?.querySelector<HTMLElement>("button"))?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      opener?.focus();
+    };
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} />
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className={`relative bg-ivory border border-line w-full shadow-xl ${className}`}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const { showToast } = useToast();
-  const { clearLocalCart, syncCartAfterLogin } = useCart();
+  const { clearLocalCart } = useCart();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"overview" | "orders" | "addresses">("overview");
-  const [addresses, setAddresses] = useState<any[]>([]);
-  const [orders, setOrders] = useState<any[]>([]);
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
@@ -49,41 +137,32 @@ export default function ProfilePage() {
     phone: "",
   });
 
+  const handleSignOut = () => {
+    // Revoke the session on the server first — best-effort, so a network
+    // failure never traps anyone in their account.
+    if (user?.token) {
+      axios
+        .post(`${API_V1}/auth/logout`, {}, { headers: { Authorization: `Bearer ${user.token}` } })
+        .catch(() => {});
+    }
+    // Clear local session + cart state only. The DB cart is left intact so it
+    // restores on the next login (and stays available on other devices).
+    localStorage.removeItem("heedy_user");
+    clearLocalCart();
+    router.push("/sign-in");
+  };
+
+  // Called from the fetch effect below without making it re-run on every render.
+  const onSessionExpired = useEffectEvent(() => {
+    handleSignOut();
+    showToast("Session expired. Please sign in again.", "error");
+  });
+
   useEffect(() => {
-    const handleAuth = async () => {
-      // Check for auto-login token in URL
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlToken = urlParams.get('token');
-
-      if (urlToken) {
-        try {
-          const baseUrl = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, "") : 'http://localhost:5000';
-          const API_URL = `${baseUrl}/api`;
-
-          const res = await axios.get(`${API_URL}/v1/users/profile`, {
-            headers: { 'Authorization': `Bearer ${urlToken}` }
-          });
-
-          if (res.data.success) {
-            const userData = { ...res.data.data, token: urlToken };
-            setUser(userData);
-            localStorage.setItem("heedy_user", JSON.stringify(userData));
-
-            // Merge any guest cart and restore the account's saved cart.
-            await syncCartAfterLogin();
-
-            // Clean up the URL to remove the token without reloading the page
-            window.history.replaceState({}, document.title, window.location.pathname);
-            setLoading(false);
-            return;
-          }
-        } catch (err) {
-          console.error("Auto-login failed:", err);
-          // Fallback to regular auth below if auto-login fails
-        }
-      }
-
-      // Load user from localStorage
+    // The session comes from this browser's storage only — never from a
+    // `?token=` in the URL, which let a link sign a visitor into someone
+    // else's account.
+    const loadSession = async () => {
       const savedUser = localStorage.getItem("heedy_user");
       if (savedUser) {
         setUser(JSON.parse(savedUser));
@@ -94,27 +173,22 @@ export default function ProfilePage() {
       setLoading(false);
     };
 
-    handleAuth();
+    loadSession();
   }, [router]);
 
   useEffect(() => {
     if (activeTab === "addresses" && user?.token) {
       const fetchAddresses = async () => {
         try {
-          const baseUrl = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, "") : 'http://localhost:5000';
-          const API_URL = `${baseUrl}/api`;
-          const res = await axios.get(`${API_URL}/v1/users/addresses`, {
+          const res = await axios.get(`${API_V1}/users/addresses`, {
             headers: { 'Authorization': `Bearer ${user.token}` }
           });
           if (res.data.success && res.data.data) {
             setAddresses(res.data.data);
           }
-        } catch (err: any) {
+        } catch (err) {
           console.error("Failed to fetch addresses", err);
-          if (err.response?.status === 401) {
-            handleSignOut();
-            showToast("Session expired. Please sign in again.", "error");
-          }
+          if (isUnauthorized(err)) onSessionExpired();
         }
       };
       fetchAddresses();
@@ -123,20 +197,15 @@ export default function ProfilePage() {
     if (user?.token && (activeTab === "orders" || activeTab === "overview")) {
       const fetchOrders = async () => {
         try {
-          const baseUrl = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, "") : 'http://localhost:5000';
-          const API_URL = `${baseUrl}/api`;
-          const res = await axios.get(`${API_URL}/v1/payments/myorders`, {
+          const res = await axios.get(`${API_V1}/payments/myorders`, {
             headers: { 'Authorization': `Bearer ${user.token}` }
           });
           if (res.data.success) {
             setOrders(res.data.data);
           }
-        } catch (err: any) {
+        } catch (err) {
           console.error("Failed to fetch orders", err);
-          if (err.response?.status === 401) {
-            handleSignOut();
-            showToast("Session expired. Please sign in again.", "error");
-          }
+          if (isUnauthorized(err)) onSessionExpired();
         }
       };
       fetchOrders();
@@ -160,8 +229,6 @@ export default function ProfilePage() {
 
     try {
       if (!user?.token) return;
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, "") : 'http://localhost:5000';
-      const API_URL = `${baseUrl}/api`;
 
       const payload = {
         street: newAddressForm.street,
@@ -175,14 +242,14 @@ export default function ProfilePage() {
 
       let res;
       if (editingAddressId) {
-        res = await axios.put(`${API_URL}/v1/users/addresses/${editingAddressId}`, payload, {
+        res = await axios.put(`${API_V1}/users/addresses/${editingAddressId}`, payload, {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${user.token}`
           }
         });
       } else {
-        res = await axios.post(`${API_URL}/v1/users/addresses`, payload, {
+        res = await axios.post(`${API_V1}/users/addresses`, payload, {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${user.token}`
@@ -199,9 +266,9 @@ export default function ProfilePage() {
       } else {
         showToast(res.data.message || "Failed to save address", "error");
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      showToast(err.response?.data?.message || "Error saving address", "error");
+      showToast(apiError(err, "Error saving address"), "error");
     } finally {
       setIsSavingAddress(false);
     }
@@ -210,27 +277,17 @@ export default function ProfilePage() {
   const handleDeleteAddress = async (addressId: string) => {
     try {
       if (!user?.token) return;
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, "") : 'http://localhost:5000';
-      const API_URL = `${baseUrl}/api`;
 
-      const res = await axios.delete(`${API_URL}/v1/users/addresses/${addressId}`, {
+      const res = await axios.delete(`${API_V1}/users/addresses/${addressId}`, {
         headers: { 'Authorization': `Bearer ${user.token}` }
       });
       if (res.data.success) {
         setAddresses(res.data.data);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      showToast(err.response?.data?.message || "Error removing address", "error");
+      showToast(apiError(err, "Error removing address"), "error");
     }
-  };
-
-  const handleSignOut = () => {
-    // Clear local session + cart state only. The DB cart is left intact so it
-    // restores on the next login (and stays available on other devices).
-    localStorage.removeItem("heedy_user");
-    clearLocalCart();
-    router.push("/sign-in");
   };
 
   const handleEditProfileClick = () => {
@@ -252,15 +309,13 @@ export default function ProfilePage() {
     setIsSavingProfile(true);
     try {
       if (!user?.token) return;
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, "") : 'http://localhost:5000';
-      const API_URL = `${baseUrl}/api`;
 
       const payload = {
         name: editProfileForm.name,
         phone: editProfileForm.phone
       };
 
-      const res = await axios.put(`${API_URL}/v1/users/profile`, payload, {
+      const res = await axios.put(`${API_V1}/users/profile`, payload, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user.token}`
@@ -274,9 +329,9 @@ export default function ProfilePage() {
         setIsEditProfileOpen(false);
         showToast("Profile updated successfully", "success");
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      showToast(err.response?.data?.message || "Error updating profile", "error");
+      showToast(apiError(err, "Error updating profile"), "error");
     } finally {
       setIsSavingProfile(false);
     }
@@ -469,21 +524,29 @@ export default function ProfilePage() {
                       </div>
                       <div className="p-6 sm:p-8">
                         <div className="flex flex-col gap-4">
-                          {order.items.map((item: any, idx: number) => (
-                            <div key={idx} className="flex items-center gap-4 border-b border-line pb-4 last:border-0 last:pb-0">
-                              <div className="w-16 h-16 bg-sand shrink-0 overflow-hidden">
-                                {item.product?.images?.[0] ? (
-                                  <img src={item.product.images[0]} alt={item.product?.name} className={`w-full h-full object-cover ${(order.orderStatus === 'delivered' || order.orderStatus === 'cancelled') ? 'grayscale' : ''}`} />
-                                ) : (
-                                  <div className="w-full h-full bg-beige" />
-                                )}
+                          {order.items.map((item, idx) => {
+                            // Purchase-time snapshots win; older orders fall back to the live product.
+                            const name = item.name || item.product?.name;
+                            const image = item.image || item.product?.images?.[0];
+                            return (
+                              <div key={idx} className="flex items-center gap-4 border-b border-line pb-4 last:border-0 last:pb-0">
+                                <div className="w-16 h-16 bg-sand shrink-0 overflow-hidden">
+                                  {image ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={cldOptimize(image, 160)} alt={name || ""} className={`w-full h-full object-cover ${(order.orderStatus === 'delivered' || order.orderStatus === 'cancelled') ? 'grayscale' : ''}`} />
+                                  ) : (
+                                    <div className="w-full h-full bg-beige" />
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <h4 className="font-display text-lg text-ink leading-tight">{name || 'Product unavailable'}</h4>
+                                  <p className="font-sans text-xs text-muted mt-1">
+                                    {item.size ? `Size ${item.size} · ` : ""}Qty {item.quantity} · ₹{item.price}
+                                  </p>
+                                </div>
                               </div>
-                              <div className="flex-1">
-                                <h4 className="font-display text-lg text-ink leading-tight">{item.product?.name || 'Product unavailable'}</h4>
-                                <p className="font-sans text-xs text-muted mt-1">Qty {item.quantity} · ₹{item.price}</p>
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
@@ -565,31 +628,32 @@ export default function ProfilePage() {
 
       {/* ── New Address Modal ── */}
       {isAddressModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
-            onClick={() => setIsAddressModalOpen(false)}
-          />
-          <div className="relative bg-ivory border border-line w-full max-w-lg shadow-xl flex flex-col overflow-hidden max-h-[90vh]">
+        <Modal
+          titleId="address-modal-title"
+          onClose={() => setIsAddressModalOpen(false)}
+          className="max-w-lg flex flex-col overflow-hidden max-h-[90vh]"
+        >
             <div className="flex items-center justify-between p-6 sm:p-8 border-b border-line">
               <div>
                 <p className="eyebrow text-bronze-deep mb-1">Delivery</p>
-                <h2 className="font-display font-light text-2xl text-ink">
+                <h2 id="address-modal-title" className="font-display font-light text-2xl text-ink">
                   {editingAddressId ? "Edit Shipping Address" : "New Shipping Address"}
                 </h2>
               </div>
               <button
                 onClick={() => setIsAddressModalOpen(false)}
+                aria-label="Close"
                 className="w-9 h-9 flex items-center justify-center rounded-full border border-line text-muted hover:text-ink hover:border-ink/30 transition-colors focus:outline-none"
               >
-                <X size={16} />
+                <X size={16} aria-hidden />
               </button>
             </div>
 
             <div className="p-6 sm:p-8 flex flex-col gap-5 overflow-y-auto">
               <div>
-                <label className="block font-sans text-xs uppercase tracking-[0.15em] text-muted mb-2">Street Address</label>
+                <label htmlFor="address-street" className="block font-sans text-xs uppercase tracking-[0.15em] text-muted mb-2">Street Address</label>
                 <input
+                  id="address-street"
                   type="text"
                   value={newAddressForm.street}
                   onChange={(e) => { setNewAddressForm({ ...newAddressForm, street: e.target.value }); setAddressErrors(prev => ({ ...prev, street: '' })); }}
@@ -601,8 +665,9 @@ export default function ProfilePage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block font-sans text-xs uppercase tracking-[0.15em] text-muted mb-2">Apartment, suite <span className="text-faint normal-case tracking-normal">(optional)</span></label>
+                  <label htmlFor="address-apartment" className="block font-sans text-xs uppercase tracking-[0.15em] text-muted mb-2">Apartment, suite <span className="text-faint normal-case tracking-normal">(optional)</span></label>
                   <input
+                    id="address-apartment"
                     type="text"
                     value={newAddressForm.apartment}
                     onChange={(e) => setNewAddressForm({ ...newAddressForm, apartment: e.target.value })}
@@ -611,8 +676,9 @@ export default function ProfilePage() {
                   />
                 </div>
                 <div>
-                  <label className="block font-sans text-xs uppercase tracking-[0.15em] text-muted mb-2">Landmark <span className="text-faint normal-case tracking-normal">(optional)</span></label>
+                  <label htmlFor="address-landmark" className="block font-sans text-xs uppercase tracking-[0.15em] text-muted mb-2">Landmark <span className="text-faint normal-case tracking-normal">(optional)</span></label>
                   <input
+                    id="address-landmark"
                     type="text"
                     value={newAddressForm.landmark}
                     onChange={(e) => setNewAddressForm({ ...newAddressForm, landmark: e.target.value })}
@@ -624,8 +690,9 @@ export default function ProfilePage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block font-sans text-xs uppercase tracking-[0.15em] text-muted mb-2">City <span className="text-bronze-deep">*</span></label>
+                  <label htmlFor="address-city" className="block font-sans text-xs uppercase tracking-[0.15em] text-muted mb-2">City <span className="text-bronze-deep">*</span></label>
                   <input
+                    id="address-city"
                     type="text"
                     value={newAddressForm.city}
                     onChange={(e) => { setNewAddressForm({ ...newAddressForm, city: e.target.value }); setAddressErrors(prev => ({ ...prev, city: '' })); }}
@@ -635,8 +702,9 @@ export default function ProfilePage() {
                   {addressErrors.city && <p className="text-bronze-deep text-xs mt-1.5">{addressErrors.city}</p>}
                 </div>
                 <div>
-                  <label className="block font-sans text-xs uppercase tracking-[0.15em] text-muted mb-2">State <span className="text-bronze-deep">*</span></label>
+                  <label htmlFor="address-state" className="block font-sans text-xs uppercase tracking-[0.15em] text-muted mb-2">State <span className="text-bronze-deep">*</span></label>
                   <input
+                    id="address-state"
                     type="text"
                     value={newAddressForm.state}
                     onChange={(e) => { setNewAddressForm({ ...newAddressForm, state: e.target.value }); setAddressErrors(prev => ({ ...prev, state: '' })); }}
@@ -649,8 +717,9 @@ export default function ProfilePage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block font-sans text-xs uppercase tracking-[0.15em] text-muted mb-2">PIN Code <span className="text-bronze-deep">*</span></label>
+                  <label htmlFor="address-zip" className="block font-sans text-xs uppercase tracking-[0.15em] text-muted mb-2">PIN Code <span className="text-bronze-deep">*</span></label>
                   <input
+                    id="address-zip"
                     type="text"
                     value={newAddressForm.zip}
                     onChange={(e) => { setNewAddressForm({ ...newAddressForm, zip: e.target.value }); setAddressErrors(prev => ({ ...prev, zip: '' })); }}
@@ -660,8 +729,9 @@ export default function ProfilePage() {
                   {addressErrors.zip && <p className="text-bronze-deep text-xs mt-1.5">{addressErrors.zip}</p>}
                 </div>
                 <div>
-                  <label className="block font-sans text-xs uppercase tracking-[0.15em] text-muted mb-2">Country</label>
+                  <label htmlFor="address-country" className="block font-sans text-xs uppercase tracking-[0.15em] text-muted mb-2">Country</label>
                   <input
+                    id="address-country"
                     type="text"
                     value={newAddressForm.country}
                     onChange={(e) => setNewAddressForm({ ...newAddressForm, country: e.target.value })}
@@ -681,20 +751,18 @@ export default function ProfilePage() {
                 {isSavingAddress ? "Saving..." : "Save Address"}
               </Button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* ── Delete Address Confirmation Modal ── */}
       {deleteConfirmId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
-            onClick={() => setDeleteConfirmId(null)}
-          />
-          <div className="relative bg-ivory border border-line w-full max-w-sm shadow-xl p-8 text-center">
+        <Modal
+          titleId="delete-address-title"
+          onClose={() => setDeleteConfirmId(null)}
+          className="max-w-sm p-8 text-center"
+        >
             <p className="eyebrow text-bronze-deep mb-3">Please confirm</p>
-            <h3 className="font-display font-light text-2xl text-ink mb-3">Remove this address?</h3>
+            <h3 id="delete-address-title" className="font-display font-light text-2xl text-ink mb-3">Remove this address?</h3>
             <p className="font-sans text-sm text-muted mb-8">This address will be permanently removed from your saved locations.</p>
             <div className="flex gap-3">
               <Button
@@ -717,37 +785,37 @@ export default function ProfilePage() {
                 Remove
               </Button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* ── Edit Profile Modal ── */}
       {isEditProfileOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
-            onClick={() => setIsEditProfileOpen(false)}
-          />
-          <div className="relative bg-ivory border border-line w-full max-w-md shadow-xl flex flex-col overflow-hidden">
+        <Modal
+          titleId="edit-profile-title"
+          onClose={() => setIsEditProfileOpen(false)}
+          className="max-w-md flex flex-col overflow-hidden"
+        >
             <div className="flex items-center justify-between p-6 sm:p-8 border-b border-line">
               <div>
                 <p className="eyebrow text-bronze-deep mb-1">Your Account</p>
-                <h2 className="font-display font-light text-2xl text-ink">
+                <h2 id="edit-profile-title" className="font-display font-light text-2xl text-ink">
                   Edit Profile
                 </h2>
               </div>
               <button
                 onClick={() => setIsEditProfileOpen(false)}
+                aria-label="Close"
                 className="w-9 h-9 flex items-center justify-center rounded-full border border-line text-muted hover:text-ink hover:border-ink/30 transition-colors focus:outline-none"
               >
-                <X size={16} />
+                <X size={16} aria-hidden />
               </button>
             </div>
 
             <div className="p-6 sm:p-8 flex flex-col gap-6">
               <div>
-                <label className="block font-sans text-xs uppercase tracking-[0.15em] text-muted mb-2">Full Name <span className="text-bronze-deep">*</span></label>
+                <label htmlFor="profile-name" className="block font-sans text-xs uppercase tracking-[0.15em] text-muted mb-2">Full Name <span className="text-bronze-deep">*</span></label>
                 <input
+                  id="profile-name"
                   type="text"
                   value={editProfileForm.name}
                   onChange={(e) => setEditProfileForm({ ...editProfileForm, name: e.target.value })}
@@ -757,8 +825,9 @@ export default function ProfilePage() {
               </div>
 
               <div>
-                <label className="block font-sans text-xs uppercase tracking-[0.15em] text-muted mb-2">Phone Number</label>
+                <label htmlFor="profile-phone" className="block font-sans text-xs uppercase tracking-[0.15em] text-muted mb-2">Phone Number</label>
                 <input
+                  id="profile-phone"
                   type="tel"
                   value={editProfileForm.phone}
                   onChange={(e) => setEditProfileForm({ ...editProfileForm, phone: e.target.value })}
@@ -778,8 +847,7 @@ export default function ProfilePage() {
                 {isSavingProfile ? "Saving..." : "Save Changes"}
               </Button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

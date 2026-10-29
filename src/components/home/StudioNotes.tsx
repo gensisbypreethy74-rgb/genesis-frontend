@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Reveal from "../ui/Reveal";
 import { fetchStudioNote, type StudioNote } from "../../lib/studioNote";
+import { safeHref } from "../../lib/safeHref";
 
 // Fallback copy — shown until the studio's version loads, and if the fetch fails.
 const DEFAULTS: StudioNote = {
@@ -20,6 +21,8 @@ export default function StudioNotes() {
   useEffect(() => {
     fetchStudioNote().then((n) => n && setNote(n));
   }, []);
+  // A link the studio mistyped is dropped rather than rendered.
+  const ctaHref = safeHref(note.ctaHref, "");
 
   return (
     <section id="story" className="bg-ivory">
@@ -34,8 +37,8 @@ export default function StudioNotes() {
               {note.description}
             </p>
           )}
-          {note.ctaLabel && note.ctaHref && (
-            <Link href={note.ctaHref} className="eyebrow text-ink link-underline">
+          {note.ctaLabel && ctaHref && (
+            <Link href={ctaHref} className="eyebrow text-ink link-underline">
               {note.ctaLabel}
             </Link>
           )}

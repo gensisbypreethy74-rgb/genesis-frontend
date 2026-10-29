@@ -46,7 +46,6 @@ export default function Footer() {
       title: "Socials",
       links: [
         { label: "Instagram", href: "https://www.instagram.com/genesis.bypreethy/", external: true },
-        { label: "Pinterest", href: "https://pinterest.com", external: true },
       ],
     },
   ];

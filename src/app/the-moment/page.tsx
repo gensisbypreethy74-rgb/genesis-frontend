@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Reveal from "../../components/ui/Reveal";
 import EditorialImage from "../../components/ui/EditorialImage";
@@ -5,13 +6,16 @@ import { ButtonLink } from "../../components/ui/Button";
 import Breadcrumbs from "../../components/common/Breadcrumbs";
 import MomentCollectionGrid from "../../components/collections/MomentCollectionGrid";
 
+export const metadata: Metadata = { title: "The Moment" };
+
 interface Moment {
   label: string;
   caption: string;
   alt: string;
   span: string;
   ratio: string;
-  image: string;
+  /** Omitted until there is photography for it: the frame shows its label. */
+  image?: string;
 }
 
 const MOMENTS: Moment[] = [
@@ -21,7 +25,6 @@ const MOMENTS: Moment[] = [
     alt: "Fabric swatches laid out on a studio table in Kochi",
     span: "lg:col-span-7",
     ratio: "aspect-[4/3]",
-    image: "/images/body-care.jpg",
   },
   {
     label: "Detail · The Line",
@@ -29,23 +32,22 @@ const MOMENTS: Moment[] = [
     alt: "Close study of a seam and drape",
     span: "lg:col-span-5",
     ratio: "aspect-[4/5]",
-    image: "/products/test-2.jpg",
   },
   {
     label: "Lookbook · At Home",
     caption: "The private hours, dressed with the same care as the public ones.",
-    alt: "At-home look from the Onam Collection",
+    alt: "A woman in a flowing red kaftan in a teal-walled interior with a brass Genesis sign",
     span: "lg:col-span-5",
     ratio: "aspect-[4/5]",
-    image: "/images/skin-care.jpg",
+    image: "/images/story-within.png",
   },
   {
     label: "Lookbook · The Onam Collection",
     caption: "Pieces named for flowers — Chethi, Thamara, Kaitha — for the season outside the window.",
-    alt: "Onam Collection look photographed in daylight",
+    alt: "Two women in silk sarees against a sunlit stone wall",
     span: "lg:col-span-7",
     ratio: "aspect-[4/3]",
-    image: "/hero-bg.png",
+    image: "/images/image.png",
   },
   {
     label: "Studio Note · Weather",
@@ -53,7 +55,6 @@ const MOMENTS: Moment[] = [
     alt: "Monsoon light across the studio floor",
     span: "lg:col-span-7",
     ratio: "aspect-[4/3]",
-    image: "/images/lip-care.jpg",
   },
   {
     label: "Detail · Considered Making",
@@ -61,7 +62,6 @@ const MOMENTS: Moment[] = [
     alt: "Hands at work on a considered production run",
     span: "lg:col-span-5",
     ratio: "aspect-[4/5]",
-    image: "/products/suncream-2.jpg",
   },
 ];
 

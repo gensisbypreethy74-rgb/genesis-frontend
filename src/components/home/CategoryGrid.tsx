@@ -5,6 +5,8 @@ import Link from "next/link";
 import Reveal from "../ui/Reveal";
 import { cldOptimize } from "../../lib/image";
 import { fetchActiveCategories, type StoreCategory } from "../../lib/categories";
+import { API_V1 } from "../../lib/api";
+import { safeHref } from "../../lib/safeHref";
 
 /**
  * The Edit — the storefront's category grid.
@@ -73,11 +75,6 @@ function TileSkeleton({ index }: { index: number }) {
   );
 }
 
-const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(
-  /\/api\/?$/,
-  ""
-);
-
 const SECTION_DEFAULTS = {
   eyebrow: "The Edit",
   heading: "Find your way in.",
@@ -100,7 +97,7 @@ export default function CategoryGrid() {
         if (!cancelled) setCategories([]);
       });
     // Editable section copy — falls back to the defaults on any failure.
-    fetch(`${API_ORIGIN}/api/v1/category-section`)
+    fetch(`${API_V1}/category-section`)
       .then((r) => r.json())
       .then((j) => {
         if (!cancelled && j?.data) setSection({ ...SECTION_DEFAULTS, ...j.data });
@@ -130,7 +127,7 @@ export default function CategoryGrid() {
             </h2>
           </div>
           <Link
-            href={section.shopHref || "/products"}
+            href={safeHref(section.shopHref, "/products")}
             className="eyebrow text-ink link-underline self-start sm:self-auto shrink-0"
           >
             {section.shopLabel} →

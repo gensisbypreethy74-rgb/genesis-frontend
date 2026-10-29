@@ -11,7 +11,7 @@ export default function RegisterPage() {
       {/* ── Image panel: a mobile image band, a full-height column on desktop ── */}
       <div className="relative w-full h-[38vh] min-h-[260px] md:w-1/2 md:h-auto bg-sand overflow-hidden">
         <EditorialImage
-          src="/images/collection-banner.jpg"
+          src="/images/signin.png"
           alt="Genesis by Preethy"
           placeholderLabel="Genesis"
           ratio=""
