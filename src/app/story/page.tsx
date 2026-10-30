@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { fetchStory } from "../../lib/story";
+import { fetchFounderNote } from "../../lib/founder";
 import StoryClient from "./StoryClient";
 
 // Re-rendered at most once a minute, so admin edits show up within that window.
@@ -12,6 +13,6 @@ export const metadata: Metadata = {
 };
 
 export default async function StoryPage() {
-  const payload = await fetchStory();
-  return <StoryClient payload={payload} />;
+  const [payload, founderNote] = await Promise.all([fetchStory(), fetchFounderNote()]);
+  return <StoryClient payload={payload} founderNote={founderNote} />;
 }

@@ -5,41 +5,27 @@ import type { Moment } from "../../lib/moment";
 
 const ease = [0.16, 1, 0.3, 1] as const;
 
-const STEPS = [
-  {
-    number: "01",
-    title: "IT OPENS, NAMED",
-    description: "A small, named run — a handful of pieces drawn around one idea. Never a full wardrobe.",
-  },
-  {
-    number: "02",
-    title: "IT CLOSES, QUIETLY",
-    description: "When it's time, the Moment closes. No sale, no clearance, no urgency manufactured to move stock.",
-  },
-  {
-    number: "03",
-    title: "IT BECOMES ARCHIVE",
-    description: "Each piece moves into the Archive — same page, same photography, re-tagged — and remains available to buy.",
-  },
-];
-
 export default function MomentExplainer({ moment }: { moment?: Moment | null }) {
-  const steps =moment?.steps?.length ? moment.steps : STEPS;
-  const label = moment?.explainerEyebrow ?? "HOW A GENESIS MOMENT WORKS";
+  // The studio's steps only: no data (or no steps) → no explainer.
+  const steps = moment?.steps ?? [];
+  if (steps.length === 0) return null;
+  const label = moment?.explainerEyebrow ?? "";
 
   return (
     <section className="bg-[#FAF8F5] py-[24px] sm:py-[30px] md:py-[36px] lg:py-[48px]">
       <div className="max-w-[1200px] mx-auto px-6 sm:px-10 lg:px-16">
         {/* Section Label */}
-        <motion.p
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "0px 0px -10% 0px" }}
-          transition={{ duration: 0.6, ease }}
-          className="text-center eyebrow text-[#9A8F84] mb-[28px] sm:mb-[28px] md:mb-[36px]"
-        >
-          {label}
-        </motion.p>
+        {label && (
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "0px 0px -10% 0px" }}
+            transition={{ duration: 0.6, ease }}
+            className="text-center eyebrow text-[#9A8F84] mb-[28px] sm:mb-[28px] md:mb-[36px]"
+          >
+            {label}
+          </motion.p>
+        )}
 
         {/* Steps Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 md:gap-12 lg:gap-16">

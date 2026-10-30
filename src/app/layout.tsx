@@ -47,12 +47,15 @@ import { CartProvider } from "../context/CartContext";
 import { ToastProvider } from "../context/ToastContext";
 import { SettingsProvider } from "../context/SettingsContext";
 import GoogleOAuthWrapper from "../components/auth/GoogleOAuthWrapper";
+import { fetchSiteSettings } from "../lib/siteSettings";
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Server-side, so the studio's WhatsApp number is in the first paint.
+  const settings = await fetchSiteSettings();
   return (
     <html
       lang="en"
@@ -69,7 +72,7 @@ export default function RootLayout({
             every component renders the same markup on server and client. */}
         <MotionConfig reducedMotion="user">
           <ToastProvider>
-            <SettingsProvider>
+            <SettingsProvider initial={settings}>
               <CartProvider>
                 <GoogleOAuthWrapper>
                   <Navbar />

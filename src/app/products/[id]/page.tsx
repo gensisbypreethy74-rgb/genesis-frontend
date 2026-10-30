@@ -400,8 +400,9 @@ export default function ProductDetailPage() {
             )}
 
             {/* Add to bag — or, for an unpriced piece, ask the studio */}
+            {/* WhatsApp links appear only once the studio's number is known. */}
             {enquire ? (
-              <a
+              whatsappNumber && <a
                 href={waUrl}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -445,7 +446,7 @@ export default function ProductDetailPage() {
                 />
                 {MADE_IN_NOTE}
               </p>
-              <a
+              {whatsappNumber && <a
                 href={waUrl}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -458,7 +459,7 @@ export default function ProductDetailPage() {
                   className="mt-[3px] shrink-0"
                 />
                 <span className="link-underline">Questions about fit? Message us on WhatsApp.</span>
-              </a>
+              </a>}
             </div>
 
             {/* Divider — the accordions below always render, so this never dangles */}

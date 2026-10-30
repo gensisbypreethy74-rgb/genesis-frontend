@@ -8,7 +8,7 @@ export interface StudioNote {
   ctaHref: string;
 }
 
-/** Fetch the editable Studio Notes block. null on failure → component uses defaults. */
+/** Fetch the editable Studio Notes block. null on failure → the block is left out. */
 export async function fetchStudioNote(): Promise<StudioNote | null> {
   try {
     const res = await fetch(`${API_V1}/studio-note`, { next: { revalidate: 60 } });

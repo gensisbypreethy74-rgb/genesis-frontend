@@ -540,12 +540,14 @@ export default function CheckoutPage() {
                     cartItems.map((item) => (
                       <div key={`${item.id}-${item.size ?? ""}`} className="flex gap-4">
                         <div className="relative w-14 aspect-[4/5] bg-sand overflow-hidden flex-shrink-0">
-                          {/* eslint-disable-next-line @next/next/no-img-element -- tiny Cloudinary-resized thumbnail */}
-                          <img
-                            src={cldOptimize(item.image, 160)}
-                            alt={item.name}
-                            className="w-full h-full object-cover"
-                          />
+                          {item.image && (
+                            // eslint-disable-next-line @next/next/no-img-element -- tiny Cloudinary-resized thumbnail
+                            <img
+                              src={cldOptimize(item.image, 160)}
+                              alt={item.name}
+                              className="w-full h-full object-cover"
+                            />
+                          )}
                           <span className="absolute top-0 right-0 bg-ink text-ivory text-[10px] w-4 h-4 flex items-center justify-center">
                             {item.quantity}
                           </span>

@@ -26,7 +26,10 @@ export default function Footer() {
         { label: "Shipping Information", href: "/shipping-information" },
         { label: "Returns & Exchanges", href: "/returns-exchanges" },
         { label: "Size Guide", href: "/size-guide" },
-        { label: "Contact / WhatsApp", href: `https://wa.me/${whatsappNumber}`, external: true },
+        // Only once the studio's number is known.
+        ...(whatsappNumber
+          ? [{ label: "Contact / WhatsApp", href: `https://wa.me/${whatsappNumber}`, external: true }]
+          : []),
       ],
     },
     {

@@ -29,7 +29,7 @@ export interface Moment {
   seasonal?: SeasonalCollection;
 }
 
-/** Fetch the editable Moment section. null on failure → components use their defaults. */
+/** Fetch the editable Moment section. null on failure → its sections are left out. */
 export async function fetchMoment(): Promise<Moment | null> {
   try {
     const res = await fetch(`${API_V1}/moment`, { next: { revalidate: 60 } });

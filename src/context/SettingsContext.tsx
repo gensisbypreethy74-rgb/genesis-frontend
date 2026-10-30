@@ -3,19 +3,23 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import axios from "axios";
 import { API_V1 } from "../lib/api";
+import type { SiteSettings } from "../lib/siteSettings";
 
-interface SiteSettings {
-  whatsappNumber: string;
-}
+// No built-in number: a WhatsApp link is only offered once the studio's own
+// number is known, never pointed at one that may be out of date.
+const UNKNOWN: SiteSettings = { whatsappNumber: "" };
 
-const defaultSettings: SiteSettings = {
-  whatsappNumber: "917736830303",
-};
+const SettingsContext = createContext<SiteSettings>(UNKNOWN);
 
-const SettingsContext = createContext<SiteSettings>(defaultSettings);
-
-export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const [settings, setSettings] = useState<SiteSettings>(defaultSettings);
+/** `initial` is fetched by the root layout on the server (null if that failed). */
+export function SettingsProvider({
+  initial,
+  children,
+}: {
+  initial: SiteSettings | null;
+  children: React.ReactNode;
+}) {
+  const [settings, setSettings] = useState<SiteSettings>(initial ?? UNKNOWN);
 
   useEffect(() => {
     const fetchSettings = async () => {

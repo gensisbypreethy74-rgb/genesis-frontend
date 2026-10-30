@@ -1,34 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import EditorialImage from "../ui/EditorialImage";
-import { fetchFounderNote, type FounderNote } from "../../lib/founder";
+import type { FounderNote } from "../../lib/founder";
 
 const ease = [0.16, 1, 0.3, 1] as const;
-
-// Fallback copy — shown until the studio's version loads, and if the fetch fails.
-const DEFAULTS: FounderNote = {
-  eyebrow: "Founder's Note · Q3, At-Home & Monsoon",
-  heading: "The monsoon makes certain truths obvious.",
-  body1:
-    "Fabric either lets you breathe or it does not. A dress either stays with the body through a wet afternoon, or it begins to fight it. This season we kept returning to pieces that hold their line in humidity and still feel quiet enough for the life most women are actually living.",
-  body2:
-    "Genesis is not interested in clothing that asks for performance. It is interested in clothing that lets a woman look like herself — with more ease, and more precision, than before.",
-  signature: "— Preethy",
-  image: "/images/saree-with-wome20.png",
-};
 
 // Same markup on server and client; reduced motion is handled by the root
 // MotionConfig, which drops the slide and keeps the fade.
 const fromLeft = { initial: { opacity: 0, x: -40 }, whileInView: { opacity: 1, x: 0 } };
 const fromRight = { initial: { opacity: 0, x: 40 }, whileInView: { opacity: 1, x: 0 } };
 
-export default function FoundersNote() {
-  const [note, setNote] = useState<FounderNote>(DEFAULTS);
-  useEffect(() => {
-    fetchFounderNote().then((n) => n && setNote(n));
-  }, []);
+/**
+ * `note` is fetched by the page on the server, so the studio's portrait and
+ * copy are in the first paint — there is no bundled version to flash first.
+ * null (the request failed) leaves the section out; a note without an image
+ * keeps the frame with the neutral placeholder tone.
+ */
+export default function FoundersNote({ note }: { note: FounderNote | null }) {
+  if (!note) return null;
 
   return (
     <section className="bg-ivory">

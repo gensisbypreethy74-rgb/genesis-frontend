@@ -130,17 +130,19 @@ export default function TrackOrderPage() {
         order ID and we will look into it during studio hours, Monday to Saturday,
         10am to 6pm IST. It is often the fastest way to sort a delivery question.
       </p>
-      <div className="not-prose mt-6">
-        <ButtonLink
-          href={`https://wa.me/${whatsappNumber}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          variant="solid"
-          size="md"
-        >
-          Message on WhatsApp
-        </ButtonLink>
-      </div>
+      {whatsappNumber && (
+        <div className="not-prose mt-6">
+          <ButtonLink
+            href={`https://wa.me/${whatsappNumber}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            variant="solid"
+            size="md"
+          >
+            Message on WhatsApp
+          </ButtonLink>
+        </div>
+      )}
     </LegalPage>
   );
 }

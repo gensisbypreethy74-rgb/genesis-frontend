@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import Reveal from "../ui/Reveal";
-import { cldOptimize } from "../../lib/image";
-import { fetchActiveCategories, type StoreCategory } from "../../lib/categories";
-import { API_V1 } from "../../lib/api";
+import { cldOptimize, hideBrokenImage } from "../../lib/image";
+import type { CategorySectionCopy, StoreCategory } from "../../lib/categories";
 import { safeHref } from "../../lib/safeHref";
 
 /**
@@ -45,6 +43,9 @@ function Tile({ category, index }: { category: StoreCategory; index: number }) {
           <img
             src={cldOptimize(category.image, 1400)}
             alt={category.name}
+            // A dead URL leaves the placeholder ground showing.
+            ref={hideBrokenImage}
+            onError={(e) => hideBrokenImage(e.currentTarget)}
             className="absolute inset-0 h-full w-full object-cover transition-transform duration-[900ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.04]"
           />
         ) : (
@@ -66,81 +67,54 @@ function Tile({ category, index }: { category: StoreCategory; index: number }) {
   );
 }
 
-/** Warm placeholders at the real tile height, so the page doesn't jump. */
-function TileSkeleton({ index }: { index: number }) {
-  return (
-    <div className={SPANS[index % SPANS.length]}>
-      <div className="img-placeholder h-[360px] sm:h-[440px] lg:h-[520px] w-full" />
-    </div>
-  );
-}
-
-const SECTION_DEFAULTS = {
-  eyebrow: "The Edit",
-  heading: "Find your way in.",
-  shopLabel: "Shop All",
-  shopHref: "/products",
-};
-
-export default function CategoryGrid() {
-  const [categories, setCategories] = useState<StoreCategory[] | null>(null);
-  const [section, setSection] = useState(SECTION_DEFAULTS);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchActiveCategories()
-      .then((list) => {
-        if (!cancelled) setCategories(list);
-      })
-      .catch((err) => {
-        console.error("Failed to load categories", err);
-        if (!cancelled) setCategories([]);
-      });
-    // Editable section copy — falls back to the defaults on any failure.
-    fetch(`${API_V1}/category-section`)
-      .then((r) => r.json())
-      .then((j) => {
-        if (!cancelled && j?.data) setSection({ ...SECTION_DEFAULTS, ...j.data });
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
+/**
+ * Both props are fetched by the home page on the server, so the studio's tiles
+ * and header copy are in the first paint.
+ */
+export default function CategoryGrid({
+  categories,
+  section,
+}: {
+  categories: StoreCategory[];
+  /** null when the header copy couldn't be loaded: the header is left out. */
+  section: CategorySectionCopy | null;
+}) {
   // Nothing published yet (or the request failed): drop the section rather than
   // leave a heading standing over an empty grid. The id stays mounted so the
   // "The Edit" nav link still has something to scroll to.
-  if (categories !== null && categories.length === 0) {
+  if (categories.length === 0) {
     return <section id="the-edit" aria-hidden className="bg-ivory" />;
   }
+  const shopHref = safeHref(section?.shopHref, "");
 
   return (
     <section id="the-edit" className="bg-ivory">
       <div className="max-w-[1500px] mx-auto px-6 sm:px-10 lg:px-16 section-pad">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-12">
-          <div>
-            <p className="eyebrow text-bronze-deep mb-4">{section.eyebrow}</p>
-            <h2 className="font-display font-light leading-[1.08] text-[clamp(2rem,4.5vw,3.5rem)] text-ink max-w-2xl">
-              {section.heading}
-            </h2>
+        {section && (
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-12">
+            <div>
+              {section.eyebrow && <p className="eyebrow text-bronze-deep mb-4">{section.eyebrow}</p>}
+              <h2 className="font-display font-light leading-[1.08] text-[clamp(2rem,4.5vw,3.5rem)] text-ink max-w-2xl">
+                {section.heading}
+              </h2>
+            </div>
+            {section.shopLabel && shopHref && (
+              <Link
+                href={shopHref}
+                className="eyebrow text-ink link-underline self-start sm:self-auto shrink-0"
+              >
+                {section.shopLabel} →
+              </Link>
+            )}
           </div>
-          <Link
-            href={safeHref(section.shopHref, "/products")}
-            className="eyebrow text-ink link-underline self-start sm:self-auto shrink-0"
-          >
-            {section.shopLabel} →
-          </Link>
-        </div>
+        )}
 
         {/* Asymmetric grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-          {categories === null
-            ? Array.from({ length: 4 }).map((_, i) => <TileSkeleton key={i} index={i} />)
-            : categories.map((category, i) => (
-                <Tile key={category.id} category={category} index={i} />
-              ))}
+          {categories.map((category, i) => (
+            <Tile key={category.id} category={category} index={i} />
+          ))}
         </div>
       </div>
     </section>

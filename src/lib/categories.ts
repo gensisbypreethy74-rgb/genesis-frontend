@@ -1,4 +1,3 @@
-import axios from "axios";
 import { MOMENT_CATEGORY } from "./product";
 import { API_V1 } from "./api";
 
@@ -62,17 +61,39 @@ interface ApiCategory {
  *
  * Only ACTIVE ones are published: setting a category to INACTIVE in the studio
  * is how you take it off the site, and deleting it removes it here on the next
- * load. Throws on failure so callers can decide what to show.
+ * load. Throws on failure so callers can decide what to show. Server renders
+ * share a one-minute cache; in the browser this is a plain request.
  */
 export async function fetchActiveCategories(): Promise<StoreCategory[]> {
-  const res = await axios.get(`${API_V1}/categories`);
-  if (!res.data?.success || !Array.isArray(res.data.data)) return [];
+  const res = await fetch(`${API_V1}/categories`, { next: { revalidate: 60 } });
+  if (!res.ok) throw new Error(`Categories request failed (${res.status})`);
+  const json = await res.json();
+  if (!json?.success || !Array.isArray(json.data)) return [];
 
-  return (res.data.data as ApiCategory[])
+  return (json.data as ApiCategory[])
     .filter((c) => c.status === "ACTIVE" && c.name)
     .map((c) => ({
       id: slugify(c.name),
       name: c.name as string,
       image: c.image || "",
     }));
+}
+
+/** The Edit section's editable header copy. */
+export interface CategorySectionCopy {
+  eyebrow: string;
+  heading: string;
+  shopLabel: string;
+  shopHref: string;
+}
+
+/** Fetch the studio's copy for The Edit header. null on failure. */
+export async function fetchCategorySection(): Promise<CategorySectionCopy | null> {
+  try {
+    const res = await fetch(`${API_V1}/category-section`, { next: { revalidate: 60 } });
+    if (!res.ok) return null;
+    return (await res.json())?.data ?? null;
+  } catch {
+    return null;
+  }
 }

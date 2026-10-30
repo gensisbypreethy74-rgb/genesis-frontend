@@ -59,11 +59,14 @@ export default function CartPage() {
                     <div className="group flex gap-5 sm:gap-8 py-8 border-b border-line">
                       {/* Thumbnail */}
                       <div className="relative w-24 sm:w-28 aspect-[4/5] bg-sand overflow-hidden flex-shrink-0">
-                        <img
-                          src={cldOptimize(item.image, 280)}
-                          alt={item.name}
-                          className="w-full h-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]"
-                        />
+                        {/* No image → the sand tile, not a broken-image icon. */}
+                        {item.image && (
+                          <img
+                            src={cldOptimize(item.image, 280)}
+                            alt={item.name}
+                            className="w-full h-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]"
+                          />
+                        )}
                       </div>
 
                       {/* Details */}

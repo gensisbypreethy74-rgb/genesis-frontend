@@ -20,6 +20,18 @@ export function resolveImageUrl(url?: string | null): string {
 }
 
 /**
+ * Hide an <img> whose load failed, leaving its frame's neutral ground showing —
+ * never a stand-in photo. Use as both `ref` and `onError`: a server-rendered
+ * image can fail before React hydrates and attaches `onError`, and the ref
+ * catches that case on mount.
+ */
+export function hideBrokenImage(img: HTMLImageElement | null): void {
+  if (img && img.complete && img.naturalWidth === 0 && img.currentSrc) {
+    img.style.visibility = "hidden";
+  }
+}
+
+/**
  * Cloudinary URL helper.
  *
  * Our banner/product images are uploaded as full-resolution PNGs (often 1.5–2 MB),
