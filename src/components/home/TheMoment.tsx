@@ -24,14 +24,14 @@ const ease = [0.16, 1, 0.3, 1] as const;
 export default function TheMoment({ moment }: { moment?: Moment | null }) {
   const reduce = useReducedMotion();
 
-  const eyebrow = moment?.eyebrow ?? "The Moment · A Considered Cadence";
-  const title = moment?.title ?? "The Moment is here.";
-  const paragraphs = (moment?.body ??
-    "A small, named run — pieces drawn for Onam, live now. It closes on its own time, not when stock runs low.\n\nNothing here is discounted, and nothing is rushed. When this window closes, the pieces move — unchanged — into the Archive, and rest there, fully available to buy."
-  ).split(/\n{2,}/);
-  const shopLabel = moment?.shopLabel ?? "Shop the Onam Collection";
+  // The studio's copy only. If it couldn't be loaded, keep just the anchor so
+  // the nav's "The Moment" link still lands — never a bundled stand-in.
+  if (!moment) return <section id="the-moment" aria-hidden className="w-full" />;
+
+  const { eyebrow, title, shopLabel } = moment;
+  const paragraphs = (moment.body || "").split(/\n{2,}/).filter(Boolean);
   // Normalise legacy hrefs that filtered on collection instead of category.
-  const rawShopHref = moment?.shopHref ?? "/products?category=the-moment";
+  const rawShopHref = moment.shopHref || "/products?category=the-moment";
   const shopHref =
     rawShopHref === "/products" ||
     rawShopHref.startsWith("/products?collection=") ||
@@ -115,7 +115,7 @@ export default function TheMoment({ moment }: { moment?: Moment | null }) {
           variants={item}
           className="mt-7 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
         >
-          <Link
+          {shopLabel && <Link
             href={shopHref}
             className="w-full sm:w-auto text-center font-sans uppercase tracking-[0.16em] text-[12px] px-8 py-4 rounded-[2px] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
             style={
@@ -131,7 +131,7 @@ export default function TheMoment({ moment }: { moment?: Moment | null }) {
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = C.primary)}
           >
             {shopLabel}
-          </Link>
+          </Link>}
 
           <Link
             href="/#the-edit"

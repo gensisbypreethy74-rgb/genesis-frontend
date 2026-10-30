@@ -33,11 +33,12 @@ export default function MomentCollectionGrid() {
       fetchMoment(),
     ])
       .then(([all, moment]) => {
+        // The studio's seasonal copy only; anything blank is left out.
         const s = moment?.seasonal;
         setProducts(all.filter(isMoment));
-        setEyebrow(s?.eyebrow || "Now · The Moment");
-        setHeading(s?.heading || "The pieces of this Moment.");
-        setCtaLabel(s?.ctaLabel || "View All Pieces");
+        setEyebrow(s?.eyebrow ?? "");
+        setHeading(s?.heading ?? "");
+        setCtaLabel(s?.ctaLabel ?? "");
         // The Moment membership is by `category`, not `collectionName`, so any
         // href that filters on collection or shows the unfiltered shop must be
         // rewritten to the category filter.
@@ -60,17 +61,21 @@ export default function MomentCollectionGrid() {
       <div className="max-w-[1500px] mx-auto px-6 sm:px-10 lg:px-16 section-pad">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-12">
           <Reveal>
-            <p className="eyebrow text-bronze-deep mb-4">{eyebrow}</p>
-            <h2 className="font-display font-light leading-[1.08] text-[clamp(2rem,4.5vw,3.5rem)] text-ink max-w-2xl">
-              {heading}
-            </h2>
+            {eyebrow && <p className="eyebrow text-bronze-deep mb-4">{eyebrow}</p>}
+            {heading && (
+              <h2 className="font-display font-light leading-[1.08] text-[clamp(2rem,4.5vw,3.5rem)] text-ink max-w-2xl">
+                {heading}
+              </h2>
+            )}
           </Reveal>
-          <Link
-            href={ctaHref}
-            className="eyebrow text-ink link-underline self-start sm:self-auto shrink-0"
-          >
-            {ctaLabel} →
-          </Link>
+          {ctaLabel && (
+            <Link
+              href={ctaHref}
+              className="eyebrow text-ink link-underline self-start sm:self-auto shrink-0"
+            >
+              {ctaLabel} →
+            </Link>
+          )}
         </div>
 
         {loading ? (

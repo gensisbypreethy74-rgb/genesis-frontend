@@ -9,7 +9,7 @@ export interface FounderNote {
   image: string;
 }
 
-/** Fetch the editable Founder's Note. null on failure → component uses its defaults. */
+/** Fetch the editable Founder's Note. null on failure → the section is left out. */
 export async function fetchFounderNote(): Promise<FounderNote | null> {
   try {
     const res = await fetch(`${API_V1}/founder-note`, { next: { revalidate: 60 } });

@@ -1,4 +1,3 @@
-import axios from "axios";
 import { API_V1 } from "./api";
 
 /**
@@ -47,14 +46,17 @@ interface ApiBanner {
  * already sorts by createdAt desc).
  *
  * A banner without a usable wide crop is dropped — it has nothing to show on
- * the surface that matters most. A missing `mobileImage` is fine: the hero
- * falls back to the wide crop on phones.
+ * the surface that matters most. A missing `mobileImage` is fine: phones get
+ * the same banner's wide crop. Throws on failure so the caller can tell "no
+ * banners" from "couldn't load banners". Server renders share a one-minute cache.
  */
 export async function fetchActiveBanners(): Promise<StoreBanner[]> {
-  const res = await axios.get(`${API_V1}/banners`);
-  if (!res.data?.success || !Array.isArray(res.data.data)) return [];
+  const res = await fetch(`${API_V1}/banners`, { next: { revalidate: 60 } });
+  if (!res.ok) throw new Error(`Banners request failed (${res.status})`);
+  const json = await res.json();
+  if (!json?.success || !Array.isArray(json.data)) return [];
 
-  return (res.data.data as ApiBanner[])
+  return (json.data as ApiBanner[])
     .filter((b) => b.status === "ACTIVE" && isUsableImageRef(b.image))
     .map((b) => ({
       id: b._id,

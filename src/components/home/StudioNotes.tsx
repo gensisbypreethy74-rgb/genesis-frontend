@@ -1,26 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import Reveal from "../ui/Reveal";
-import { fetchStudioNote, type StudioNote } from "../../lib/studioNote";
+import type { StudioNote } from "../../lib/studioNote";
 import { safeHref } from "../../lib/safeHref";
 
-// Fallback copy — shown until the studio's version loads, and if the fetch fails.
-const DEFAULTS: StudioNote = {
-  eyebrow: "Story · Studio Notes — The Designer's Eye",
-  heading: "The line begins where weather, body and proportion meet.",
-  description:
-    "Every Genesis piece is shaped through three questions: does it serve the woman over forty, will it breathe in heat and monsoon air, and does it give her identity without asking her to perform. Nineteen years of an interior designer's eye, turned toward clothing.",
-  ctaLabel: "View the Collection",
-  ctaHref: "/products",
-};
+/**
+ * `note` is fetched by the home page on the server, so the studio's copy is in
+ * the first paint. null (the request failed) leaves only the `#story` anchor,
+ * so the nav link still has somewhere to land.
+ */
+export default function StudioNotes({ note }: { note: StudioNote | null }) {
+  if (!note) return <section id="story" aria-hidden className="bg-ivory" />;
 
-export default function StudioNotes() {
-  const [note, setNote] = useState<StudioNote>(DEFAULTS);
-  useEffect(() => {
-    fetchStudioNote().then((n) => n && setNote(n));
-  }, []);
   // A link the studio mistyped is dropped rather than rendered.
   const ctaHref = safeHref(note.ctaHref, "");
 

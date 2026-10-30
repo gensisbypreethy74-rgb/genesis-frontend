@@ -35,6 +35,11 @@ export default function EditorialImage({
 }: EditorialImageProps) {
   const [errored, setErrored] = useState(false);
   const show = src && !errored;
+  // A server-rendered image can fail before hydration attaches onError; check
+  // once on mount so the placeholder still replaces the broken-image icon.
+  const checkLoaded = (img: HTMLImageElement | null) => {
+    if (img && img.complete && img.naturalWidth === 0 && img.currentSrc) setErrored(true);
+  };
   const imgClass = `h-full w-full object-cover transition-transform duration-[900ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
     zoom ? "group-hover:scale-[1.04]" : ""
   }`;
@@ -50,6 +55,7 @@ export default function EditorialImage({
           fill
           sizes="(max-width: 1024px) 100vw, 50vw"
           priority={priority}
+          ref={checkLoaded}
           onError={() => setErrored(true)}
           className={imgClass}
         />
@@ -59,6 +65,7 @@ export default function EditorialImage({
           src={cldOptimize(src, width)}
           alt={alt}
           loading={priority ? "eager" : "lazy"}
+          ref={checkLoaded}
           onError={() => setErrored(true)}
           className={imgClass}
         />

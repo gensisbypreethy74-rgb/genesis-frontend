@@ -51,8 +51,8 @@ export interface StoryPayload {
 }
 
 /**
- * Fetch the published Story feed. Returns null on any failure (caller falls
- * back). Cached for a minute, so studio edits show up within that window.
+ * Fetch the published Story feed. Returns null on any failure (the page says
+ * so). Cached for a minute, so studio edits show up within that window.
  */
 export async function fetchStory(): Promise<StoryPayload | null> {
   try {
