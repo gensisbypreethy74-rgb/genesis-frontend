@@ -1,15 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useGoogleLogin } from "@react-oauth/google";
 import { useToast } from "../../context/ToastContext";
 import { useCart } from "../../context/CartContext";
 import { API_V1 } from "../../lib/api";
+import { safeNextPath } from "../../lib/safeHref";
 
 interface GoogleAuthButtonProps {
+  /** Which page the button is on. Only the label differs: either way an
+   * existing customer is signed in and a new one gets an account. */
   mode?: "signin" | "register";
+}
+
+/** Where the shopper was headed (`?next=`), checked to be an on-site path. */
+const readReturnPath = () => safeNextPath(new URLSearchParams(window.location.search).get("next"));
+
+/**
+ * The sign-in pages' return path, for links between them and for showing that
+ * a checkout is waiting. "/" until hydrated (the server can't see the query).
+ */
+const subscribeNever = () => () => {};
+export function useReturnPath() {
+  return useSyncExternalStore(subscribeNever, readReturnPath, () => "/");
 }
 
 // Check if Google OAuth is configured
@@ -33,25 +48,22 @@ function GoogleAuthButtonConfigured({ mode = "signin" }: GoogleAuthButtonProps) 
         setError(null);
 
         // Send only Google's access token; the backend asks Google who it
-        // belongs to. `mode` tells it whether this is a sign in or a sign up
-        // so it can reject signing in when not registered, or signing up when already registered.
+        // belongs to, then signs in that customer or creates their account.
         const res = await axios.post(`${API_V1}/auth/google`, {
           accessToken: tokenResponse.access_token,
-          mode,
         });
 
         if (res.data.data) {
           localStorage.setItem("heedy_user", JSON.stringify(res.data.data));
-          // Merge any guest cart into the account cart and restore saved items.
+          // Merge the guest bag into the account cart (kept until that succeeds).
           await syncCartAfterLogin();
 
           showToast(
-            mode === "signin"
-              ? "Signed in with Google successfully!"
-              : "Account created with Google successfully!",
+            res.data.data.isNewUser ? "Welcome to Genesis. Your account is ready." : "Signed in with Google.",
             "success"
           );
-          router.push("/");
+          // Back to where they were going (e.g. checkout), not the home page.
+          router.replace(readReturnPath());
         }
       } catch (err) {
         console.error("Google auth error:", err);
@@ -64,7 +76,15 @@ function GoogleAuthButtonConfigured({ mode = "signin" }: GoogleAuthButtonProps) 
     },
     onError: (error) => {
       console.error("Google login error:", error);
-      setError("Google sign-in was cancelled or failed. Please try again.");
+      setError("Google sign-in was cancelled or failed. Your bag is still saved. Please try again.");
+    },
+    // The popup was closed, or the browser blocked it.
+    onNonOAuthError: (error) => {
+      setError(
+        error.type === "popup_failed_to_open"
+          ? "Couldn't open the Google window. Please allow pop-ups for this site and try again."
+          : "Google sign-in was cancelled. Your bag is still saved."
+      );
     },
   });
 

@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { API_V1 } from "../lib/api";
+import { useToast } from "./ToastContext";
 
 export interface CartItem {
   id: string;
@@ -34,6 +35,17 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
  * doubling quantities.
  */
 const GUEST_CART_KEY = "heedy_cart";
+/**
+ * The guest cart's own id, sent with the sign-in merge. The server applies a
+ * given id once, so the guest cart can be kept until the merge is confirmed
+ * (and retried if it failed) without ever being added twice.
+ */
+const GUEST_CART_ID_KEY = "heedy_cart_id";
+
+/** Checkout takes at most 20 of one piece per line; the bag never holds more. */
+export const MAX_PER_LINE = 20;
+/** The most lines one merge or quote request may carry (the API's limit). */
+const MAX_LINES = 50;
 
 // ── Module-level helpers (no component state, safe to hoist) ──
 const getToken = (): string | null => {
@@ -61,8 +73,21 @@ const readGuestCart = (): CartItem[] => {
 };
 
 const writeGuestCart = (items: CartItem[]) => {
-  if (!getToken()) localStorage.setItem(GUEST_CART_KEY, JSON.stringify(items));
+  if (getToken()) return;
+  localStorage.setItem(GUEST_CART_KEY, JSON.stringify(items));
+  if (!localStorage.getItem(GUEST_CART_ID_KEY)) localStorage.setItem(GUEST_CART_ID_KEY, crypto.randomUUID());
 };
+
+const clearGuestStorage = () => {
+  localStorage.removeItem(GUEST_CART_KEY);
+  localStorage.removeItem(GUEST_CART_ID_KEY);
+};
+
+/** A guest cart waiting to be merged into the account it signed in to. */
+const hasPendingMerge = () => readGuestCart().length > 0 && !!localStorage.getItem(GUEST_CART_ID_KEY);
+
+const toRequestLines = (items: CartItem[]) =>
+  items.slice(0, MAX_LINES).map((i) => ({ productId: i.id, quantity: Math.min(MAX_PER_LINE, i.quantity), size: i.size }));
 
 const isUnauthorized = (err: unknown) => axios.isAxiosError(err) && err.response?.status === 401;
 
@@ -78,9 +103,21 @@ interface BackendCart {
     quantity: number;
     size?: string;
   }[];
+  /** Pieces the server just took out because they can no longer be bought. */
+  removed?: string[];
 }
 
 type CartResponse = { data: { success?: boolean; data?: BackendCart } };
+
+interface QuoteLine {
+  productId: string;
+  size?: string;
+  name: string | null;
+  image?: string;
+  price?: number;
+  quantity?: number;
+  available: boolean;
+}
 
 // Map a populated backend cart (items.product) into frontend CartItem shape.
 const mapBackendItems = (items: BackendCart["items"]): CartItem[] =>
@@ -114,8 +151,22 @@ const mapBackendItems = (items: BackendCart["items"]): CartItem[] =>
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const { showToast } = useToast();
 
-  // An expired or revoked session: drop it and fall back to an empty guest cart
+  // Pieces dropped because they can no longer be bought are named, never lost silently.
+  const announceRemoved = useCallback(
+    (names?: (string | null)[]) => {
+      const list = [...new Set((names || []).filter(Boolean))] as string[];
+      if (list.length === 0) return;
+      showToast(
+        `${list.join(", ")} ${list.length === 1 ? "is" : "are"} no longer available and ${list.length === 1 ? "was" : "were"} removed from your bag.`,
+        "warning"
+      );
+    },
+    [showToast]
+  );
+
+  // An expired or revoked session: drop it and fall back to the guest cart
   // instead of showing a cart the server will refuse at checkout.
   const endSession = useCallback(() => {
     localStorage.removeItem("heedy_user");
@@ -123,14 +174,62 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Adopt the server's cart (the response of every cart call) as the truth.
-  const adopt = useCallback((data?: BackendCart) => {
-    if (data?.items) setCartItems(mapBackendItems(data.items));
-  }, []);
+  const adopt = useCallback(
+    (data?: BackendCart) => {
+      if (data?.items) setCartItems(mapBackendItems(data.items));
+      announceRemoved(data?.removed);
+    },
+    [announceRemoved]
+  );
 
-  // Fetch the authenticated user's cart from the backend and adopt it as source of truth.
+  // A guest's bag at today's prices: the server reads the catalogue (nothing
+  // is stored) and pieces that can no longer be bought are taken out.
+  const quoteGuestCart = useCallback(async () => {
+    const items = readGuestCart();
+    if (items.length === 0) return;
+    const sent = JSON.stringify(items);
+    try {
+      const res = await axios.post<{ success?: boolean; data?: { items: QuoteLine[] } }>(`${API_V1}/cart/quote`, {
+        items: toRequestLines(items),
+      });
+      // The shopper changed the bag while this was in flight: keep their change.
+      if (!res.data.success || !res.data.data || getToken() || localStorage.getItem(GUEST_CART_KEY) !== sent) return;
+
+      const lines = new Map<string, CartItem>();
+      const gone: (string | null)[] = [];
+      for (const q of res.data.data.items) {
+        if (!q.available) {
+          gone.push(q.name);
+          continue;
+        }
+        const key = `${q.productId}__${q.size ?? ""}`;
+        const existing = lines.get(key);
+        if (existing) existing.quantity = Math.min(MAX_PER_LINE, existing.quantity + (q.quantity || 1));
+        else
+          lines.set(key, {
+            id: q.productId,
+            name: q.name || "",
+            image: q.image || "",
+            price: q.price || 0,
+            currency: "₹",
+            size: q.size,
+            quantity: q.quantity || 1,
+          });
+      }
+      const fresh = [...lines.values()];
+      writeGuestCart(fresh);
+      setCartItems(fresh);
+      announceRemoved(gone);
+    } catch (err) {
+      // Offline or the API is waking up: keep showing the bag as saved.
+      console.error("Couldn't refresh bag prices", err);
+    }
+  }, [announceRemoved]);
+
+  // The signed-in cart from the server, or the guest bag at current prices.
   const refreshCart = useCallback(async () => {
     const token = getToken();
-    if (!token) return;
+    if (!token) return quoteGuestCart();
     try {
       const res = await axios.get<CartResponse["data"]>(`${API_V1}/cart`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -140,57 +239,92 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (isUnauthorized(err)) endSession();
       else console.error("Failed to refresh cart from backend", err);
     }
-  }, [adopt, endSession]);
+  }, [adopt, endSession, quoteGuestCart]);
 
-  // Called right after login: merge the guest cart into the DB cart once, then adopt the result.
+  /**
+   * Right after sign-in: merge the guest bag into the account's cart, then show
+   * the result. The guest bag is forgotten only once the server has it; if the
+   * merge fails it stays (with its id) and is retried on the next page load or
+   * when the tab regains focus — the id makes a repeat add nothing twice.
+   */
   const syncCartAfterLogin = useCallback(async () => {
     const token = getToken();
     if (!token) return;
 
     const guestItems = readGuestCart();
-    // Remove before the request so a retry or reload can never merge it twice.
-    localStorage.removeItem(GUEST_CART_KEY);
+    if (guestItems.length === 0) {
+      clearGuestStorage();
+      await refreshCart();
+      return;
+    }
+    let mergeId = localStorage.getItem(GUEST_CART_ID_KEY);
+    if (!mergeId) {
+      mergeId = crypto.randomUUID();
+      localStorage.setItem(GUEST_CART_ID_KEY, mergeId);
+    }
 
     try {
-      if (guestItems.length > 0) {
-        const res = await axios.post(
-          `${API_V1}/cart/merge`,
-          {
-            items: guestItems.map((i) => ({
-              productId: i.id,
-              quantity: i.quantity,
-              size: i.size,
-            })),
-          },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        if (res.data.success && res.data.data?.items) {
-          adopt(res.data.data);
-          return;
-        }
-      }
-      // No guest items (or merge returned nothing) — just pull the saved cart.
-      await refreshCart();
+      const res = await axios.post(
+        `${API_V1}/cart/merge`,
+        { items: toRequestLines(guestItems), mergeId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // Only now is it safe to forget the guest bag: the account holds it.
+      clearGuestStorage();
+      if (res.data.success && res.data.data?.items) adopt(res.data.data);
+      else await refreshCart();
     } catch (err) {
-      console.error("Failed to sync cart after login", err);
+      if (isUnauthorized(err)) {
+        endSession();
+        return;
+      }
+      console.error("Failed to merge the guest bag; it is kept and will be retried", err);
       await refreshCart();
     }
-  }, [adopt, refreshCart]);
+  }, [adopt, endSession, refreshCart]);
 
   // On first mount / browser refresh: restore from backend if logged in, else from localStorage.
   useEffect(() => {
     const initCart = async () => {
       if (getToken()) {
-        // A signed-in browser has no business holding a local copy (older
-        // versions stored one, which later got merged in again).
-        localStorage.removeItem(GUEST_CART_KEY);
+        // A guest bag left from a sign-in whose merge didn't complete: retry it.
+        if (hasPendingMerge()) {
+          await syncCartAfterLogin();
+          return;
+        }
+        // Any other local copy is from an older version, which kept the
+        // signed-in cart here too; merging it would double those quantities.
+        clearGuestStorage();
         await refreshCart();
       } else {
         setCartItems(readGuestCart());
+        await quoteGuestCart();
       }
     };
     initCart();
-  }, [refreshCart]);
+  }, [refreshCart, syncCartAfterLogin, quoteGuestCart]);
+
+  // Other tabs: a guest bag edited elsewhere, or a sign-in / sign-out there,
+  // shows up here at once. Coming back to a signed-in tab re-reads the saved cart.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === GUEST_CART_KEY && !getToken()) setCartItems(readGuestCart());
+      if (e.key === "heedy_user") {
+        if (getToken()) void refreshCart();
+        else setCartItems(readGuestCart());
+      }
+    };
+    const onFocus = () => {
+      if (!getToken()) return;
+      void (hasPendingMerge() ? syncCartAfterLogin() : refreshCart());
+    };
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [refreshCart, syncCartAfterLogin]);
 
   // Signed-in changes go to the server; its answer replaces the optimistic
   // local state, and any failure re-reads the server cart.
@@ -203,6 +337,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       if (isUnauthorized(err)) endSession();
       else {
+        if (axios.isAxiosError(err) && err.response?.data?.message) showToast(err.response.data.message, "warning");
         console.error("Cart update failed; reloading the saved cart", err);
         await refreshCart();
       }
@@ -214,34 +349,35 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const existing = prev.find((i) => i.id === item.id && i.size === item.size);
       let newCart;
       if (existing) {
-        const newQty = existing.quantity + item.quantity;
+        const newQty = Math.min(MAX_PER_LINE, existing.quantity + item.quantity);
         newCart = prev.map((i) =>
           i.id === item.id && i.size === item.size ? { ...i, quantity: newQty } : i
         );
       } else {
-        newCart = [...prev, item];
+        newCart = [...prev, { ...item, quantity: Math.min(MAX_PER_LINE, item.quantity) }];
       }
       writeGuestCart(newCart);
       return newCart;
     });
 
     await sendToServer((headers) =>
-      axios.post(`${API_V1}/cart`, { productId: item.id, quantity: item.quantity, size: item.size }, { headers })
+      axios.post(`${API_V1}/cart`, { productId: item.id, quantity: Math.min(MAX_PER_LINE, item.quantity), size: item.size }, { headers })
     );
   };
 
   const updateQuantity = async (id: string, qty: number, size?: string) => {
     if (qty < 1) return;
+    const quantity = Math.min(MAX_PER_LINE, qty);
     setCartItems((prev) => {
       const newCart = prev.map((i) =>
-        i.id === id && i.size === size ? { ...i, quantity: qty } : i
+        i.id === id && i.size === size ? { ...i, quantity } : i
       );
       writeGuestCart(newCart);
       return newCart;
     });
 
     await sendToServer((headers) =>
-      axios.put(`${API_V1}/cart/item`, { productId: id, quantity: qty, size }, { headers })
+      axios.put(`${API_V1}/cart/item`, { productId: id, quantity, size }, { headers })
     );
   };
 
@@ -261,7 +397,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Clears everywhere — local + backend.
   const clearCart = async () => {
     setCartItems([]);
-    localStorage.removeItem(GUEST_CART_KEY);
+    clearGuestStorage();
     await sendToServer((headers) => axios.delete(`${API_V1}/cart`, { headers }));
   };
 
@@ -269,7 +405,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // after a paid order (the server empties the DB cart itself).
   const clearLocalCart = () => {
     setCartItems([]);
-    localStorage.removeItem(GUEST_CART_KEY);
+    clearGuestStorage();
   };
 
   const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);

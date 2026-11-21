@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import axios from "axios";
 import LegalPage from "../../components/common/LegalPage";
 import { Button, ButtonLink } from "../../components/ui/Button";
@@ -27,8 +27,19 @@ const STATUS_COPY: Record<TrackedOrder["orderStatus"], { label: string; detail: 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
 
+// The order ID from an order email's "Track your order" link (`?orderId=`),
+// read after hydration. Only a well-formed ID is used.
+const subscribeNever = () => () => {};
+const readLinkedOrderId = () => {
+  const id = new URLSearchParams(window.location.search).get("orderId") ?? "";
+  return /^[0-9a-f]{24}$/i.test(id) ? id : "";
+};
+
 export default function TrackOrderPage() {
-  const [orderId, setOrderId] = useState("");
+  const linkedOrderId = useSyncExternalStore(subscribeNever, readLinkedOrderId, () => "");
+  // What the shopper typed, or the ID from the email link until they type.
+  const [typedOrderId, setOrderId] = useState<string | null>(null);
+  const orderId = typedOrderId ?? linkedOrderId;
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TrackedOrder | null>(null);

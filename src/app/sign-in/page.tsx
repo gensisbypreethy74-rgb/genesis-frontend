@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import GoogleAuthButton from "../../components/auth/GoogleAuthButton";
+import GoogleAuthButton, { useReturnPath } from "../../components/auth/GoogleAuthButton";
 import EditorialImage from "../../components/ui/EditorialImage";
 import Breadcrumbs from "../../components/common/Breadcrumbs";
 
 export default function SignInPage() {
+  const returnPath = useReturnPath();
+  const toCheckout = returnPath === "/checkout";
   return (
     <div className="min-h-screen bg-ivory pt-[68px] md:pt-[84px] flex flex-col md:flex-row">
       {/* ── Image panel: a mobile image band, a full-height column on desktop ── */}
@@ -39,7 +41,9 @@ export default function SignInPage() {
           </h1>
 
           <p className="font-sans text-muted text-[15px] sm:text-base leading-relaxed mb-9">
-            Continue with your Google account to view orders, saved addresses, and your cart.
+            {toCheckout
+              ? "Sign in with Google to complete your order. Your bag is saved and will be waiting at checkout. New here? An account is created for you."
+              : "Continue with your Google account to view orders, saved addresses, and your cart."}
           </p>
 
           {/* Google SSO */}
@@ -49,7 +53,7 @@ export default function SignInPage() {
 
           <div className="border-t border-line pt-8">
             <Link
-              href="/register"
+              href={returnPath === "/" ? "/register" : `/register?next=${encodeURIComponent(returnPath)}`}
               className="font-sans text-sm text-muted hover:text-ink transition-colors"
             >
               New to Genesis?{" "}
