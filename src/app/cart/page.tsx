@@ -1,20 +1,36 @@
 "use client";
 
+import { useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import Breadcrumbs from "../../components/common/Breadcrumbs";
 
-import { useCart } from "../../context/CartContext";
+import { useCart, MAX_PER_LINE } from "../../context/CartContext";
 import { ButtonLink } from "../../components/ui/Button";
 import Reveal from "../../components/ui/Reveal";
 import { cldOptimize } from "../../lib/image";
+import { formatINR } from "../../lib/product";
+
+// Signed in or not, read after hydration (the server always renders "guest").
+const subscribeNever = () => () => {};
+const readSignedIn = () => !!localStorage.getItem("heedy_user");
+const serverSignedIn = () => false;
 
 // ─── Page Component ───────────────────────────────────────────────────────────
 
 export default function CartPage() {
-  const { cartItems, updateQuantity, removeItem } = useCart();
+  const { cartItems, updateQuantity, removeItem, refreshCart } = useCart();
+  const signedIn = useSyncExternalStore(subscribeNever, readSignedIn, serverSignedIn);
+
+  // Current prices and availability: the saved cart for a customer, a catalogue
+  // quote for a guest. Checkout prices everything again on the server anyway.
+  useEffect(() => {
+    void refreshCart();
+  }, [refreshCart]);
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const total = subtotal;
+  // Guests sign in first (Google), then land straight back on checkout with their bag.
+  const checkoutHref = signedIn ? "/checkout" : "/sign-in?next=%2Fcheckout";
 
   return (
     <div className="min-h-screen bg-ivory pt-[84px]">
@@ -83,7 +99,7 @@ export default function CartPage() {
                             )}
                           </div>
                           <p className="font-sans text-base sm:text-lg text-ink flex-shrink-0">
-                            {item.currency}{item.price}
+                            {formatINR(item.price)}
                           </p>
                         </div>
 
@@ -104,7 +120,9 @@ export default function CartPage() {
                             <button
                               onClick={() => updateQuantity(item.id, item.quantity + 1, item.size)}
                               aria-label="Increase quantity"
-                              className="w-9 h-9 flex items-center justify-center text-lg leading-none text-muted hover:text-ink hover:bg-beige/50 transition-colors"
+                              disabled={item.quantity >= MAX_PER_LINE}
+                              title={item.quantity >= MAX_PER_LINE ? `At most ${MAX_PER_LINE} of one piece per order` : undefined}
+                              className="w-9 h-9 flex items-center justify-center text-lg leading-none text-muted hover:text-ink hover:bg-beige/50 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
                             >
                               +
                             </button>
@@ -144,7 +162,7 @@ export default function CartPage() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center font-sans text-sm">
                       <span className="text-muted">Subtotal</span>
-                      <span className="text-ink">₹{subtotal}</span>
+                      <span className="text-ink">{formatINR(subtotal)}</span>
                     </div>
                     <div className="flex justify-between items-center font-sans text-sm">
                       <span className="text-muted">Shipping</span>
@@ -158,11 +176,11 @@ export default function CartPage() {
 
                   <div className="flex justify-between items-baseline mb-8">
                     <span className="font-sans text-sm uppercase tracking-[0.14em] text-ink">Total</span>
-                    <span className="font-display font-light text-3xl text-ink">₹{total}</span>
+                    <span className="font-display font-light text-3xl text-ink">{formatINR(total)}</span>
                   </div>
 
                   <ButtonLink
-                    href="/checkout"
+                    href={checkoutHref}
                     variant="solid"
                     size="md"
                     className="w-full"
@@ -170,6 +188,11 @@ export default function CartPage() {
                     Proceed to Checkout
                   </ButtonLink>
 
+                  {!signedIn && (
+                    <p className="text-center font-sans text-[12px] text-muted mt-4 leading-relaxed">
+                      You&apos;ll sign in with Google before paying. Your bag stays saved.
+                    </p>
+                  )}
                   <p className="text-center font-sans text-[11px] text-faint mt-5 leading-relaxed">
                     Secure checkout. Considered production, shipped from Kochi.
                   </p>

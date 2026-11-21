@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useEffectEvent, useRef } from "react";
+import { useState, useEffect, useEffectEvent, useRef, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { X } from "lucide-react";
@@ -106,15 +106,30 @@ function Modal({
   );
 }
 
+type ProfileTab = "overview" | "orders" | "addresses";
+
+// The address bar's query, read after hydration ("" on the server). Links from
+// order emails open `?tab=orders&order=<id>`.
+const subscribeNever = () => () => {};
+const readQuery = () => window.location.search;
+const serverQuery = () => "";
+
 export default function ProfilePage() {
   const router = useRouter();
   const { showToast } = useToast();
   const { clearLocalCart } = useCart();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"overview" | "orders" | "addresses">("overview");
+  const query = new URLSearchParams(useSyncExternalStore(subscribeNever, readQuery, serverQuery));
+  const requestedTab = query.get("tab");
+  const requestedOrder = query.get("order");
+  // The tab the link asked for, until the customer picks another.
+  const [tabChoice, setActiveTab] = useState<ProfileTab | null>(null);
+  const activeTab: ProfileTab =
+    tabChoice ?? (requestedTab === "orders" || requestedTab === "addresses" ? requestedTab : "overview");
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoaded, setOrdersLoaded] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
@@ -167,8 +182,9 @@ export default function ProfilePage() {
       if (savedUser) {
         setUser(JSON.parse(savedUser));
       } else {
-        // Not logged in, redirect to sign-in
-        router.push("/sign-in");
+        // Not signed in: sign in first, then come straight back here — to the
+        // exact order, when the link came from an order email.
+        router.replace(`/sign-in?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       }
       setLoading(false);
     };
@@ -206,11 +222,19 @@ export default function ProfilePage() {
         } catch (err) {
           console.error("Failed to fetch orders", err);
           if (isUnauthorized(err)) onSessionExpired();
+        } finally {
+          setOrdersLoaded(true);
         }
       };
       fetchOrders();
     }
   }, [activeTab, user]);
+
+  // Opened from an order email: bring that order into view.
+  useEffect(() => {
+    if (activeTab !== "orders" || !requestedOrder || !ordersLoaded) return;
+    document.getElementById(`order-${requestedOrder}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [activeTab, requestedOrder, ordersLoaded]);
 
   const validateAddressForm = () => {
     const errors: Record<string, string> = {};
@@ -493,6 +517,13 @@ export default function ProfilePage() {
                 My Orders
               </h2>
 
+              {requestedOrder && ordersLoaded && !orders.some((o) => o._id === requestedOrder) && (
+                <p className="mb-8 border border-line bg-cream px-5 py-4 font-sans text-sm text-muted">
+                  That order isn&apos;t on the account you&apos;re signed in with. If you placed it with
+                  another Google account, sign out and sign in with that one.
+                </p>
+              )}
+
               {orders.length > 0 ? (
                 <div className="flex flex-col gap-8">
                   {[...orders].sort((a, b) => {
@@ -502,7 +533,12 @@ export default function ProfilePage() {
                     if (!aIsDone && bIsDone) return -1;
                     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
                   }).map((order) => (
-                    <div key={order._id} className={`bg-cream border border-line overflow-hidden ${(order.orderStatus === 'delivered' || order.orderStatus === 'cancelled') ? 'opacity-70' : ''}`}>
+                    <div
+                      key={order._id}
+                      id={`order-${order._id}`}
+                      aria-current={order._id === requestedOrder ? "true" : undefined}
+                      className={`bg-cream border overflow-hidden scroll-mt-28 ${order._id === requestedOrder ? 'border-bronze' : 'border-line'} ${(order.orderStatus === 'delivered' || order.orderStatus === 'cancelled') ? 'opacity-70' : ''}`}
+                    >
                       <div className="border-b border-line p-6 sm:px-8 flex flex-wrap items-center justify-between gap-6">
                         <div>
                           <p className="eyebrow text-faint mb-1">Order Placed</p>

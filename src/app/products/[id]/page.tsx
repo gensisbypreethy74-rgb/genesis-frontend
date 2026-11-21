@@ -289,12 +289,8 @@ export default function ProductDetailPage() {
   const handleAddToCart = () => {
     if (!canAdd) return;
 
-    const savedUser = localStorage.getItem("heedy_user");
-    if (!savedUser) {
-      router.push("/sign-in");
-      return;
-    }
-
+    // Guests add to a bag kept in this browser; signing in is asked for only
+    // at checkout, and the bag is merged into their account then.
     // Payload shape is load-bearing: the backend keys a cart line by
     // productId + size, where `size` must be the variant's `volume` string.
     addToCart({

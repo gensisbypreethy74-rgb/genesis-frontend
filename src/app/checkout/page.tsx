@@ -102,8 +102,10 @@ export default function CheckoutPage() {
     const token = readToken();
     // Checkout needs an account (orders, addresses and receipts belong to one).
     if (!token) {
-      showToast("Please sign in to check out.", "warning");
-      router.replace("/sign-in");
+      // The bag stays in this browser; it's merged into the account at sign-in,
+      // which then brings the shopper straight back here.
+      showToast("Please sign in to check out. Your bag is saved.", "warning");
+      router.replace("/sign-in?next=%2Fcheckout");
       return;
     }
     // Show the bag at today's prices, which is what the server will charge.

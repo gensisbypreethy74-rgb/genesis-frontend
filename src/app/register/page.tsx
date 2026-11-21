@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import GoogleAuthButton from "../../components/auth/GoogleAuthButton";
+import GoogleAuthButton, { useReturnPath } from "../../components/auth/GoogleAuthButton";
 import EditorialImage from "../../components/ui/EditorialImage";
 import Breadcrumbs from "../../components/common/Breadcrumbs";
 
 export default function RegisterPage() {
+  const returnPath = useReturnPath();
   return (
     <div className="min-h-screen bg-ivory pt-[68px] md:pt-[84px] flex flex-col md:flex-row">
       {/* ── Image panel: a mobile image band, a full-height column on desktop ── */}
@@ -50,7 +51,7 @@ export default function RegisterPage() {
 
           <div className="border-t border-line pt-8">
             <Link
-              href="/sign-in"
+              href={returnPath === "/" ? "/sign-in" : `/sign-in?next=${encodeURIComponent(returnPath)}`}
               className="font-sans text-sm text-muted hover:text-ink transition-colors"
             >
               Already have an account?{" "}
